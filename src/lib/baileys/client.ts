@@ -1,0 +1,183 @@
+import {
+  makeWASocket,
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion,
+  Browsers,
+  DisconnectReason,
+} from "@whiskeysockets/baileys";
+import type { WASocket } from "@whiskeysockets/baileys";
+import { Boom } from "@hapi/boom";
+import pino from "pino";
+import qrcode from "qrcode";
+import qrcodeTerminal from "qrcode-terminal";
+import path from "node:path";
+import fs from "node:fs";
+import { setConnectionState, getPendingOutbox, markOutboxSent } from "../db";
+import { handleIncomingMessage } from "./handler";
+
+const AUTH_DIR = path.resolve(process.cwd(), "auth");
+const logger = pino({ level: "silent" });
+
+interface BotHandle {
+  sock: WASocket;
+  outboxInterval: ReturnType<typeof setInterval>;
+}
+
+let handle: BotHandle | null = null;
+let isStarting = false;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearReconnectTimer() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+}
+
+function cleanupHandle() {
+  if (handle) {
+    clearInterval(handle.outboxInterval);
+    try { handle.sock.end(undefined); } catch {}
+    handle = null;
+  }
+}
+
+function clearAuth() {
+  if (fs.existsSync(AUTH_DIR)) {
+    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+  }
+}
+
+function phoneToJid(phone: string): string {
+  // LIDs son identificadores largos (14+ dígitos), telefonos reales suelen ser <=13
+  const suffix = phone.length > 13 ? "@lid" : "@s.whatsapp.net";
+  return `${phone}${suffix}`;
+}
+
+async function startOutboxPoller(sock: WASocket) {
+  return setInterval(async () => {
+    const pending = getPendingOutbox();
+    for (const item of pending) {
+      const jid = phoneToJid(item.phone);
+      try {
+        await sock.sendMessage(jid, { text: item.content });
+        markOutboxSent(item.id);
+        console.log(`[outbox] enviado a ${jid}: "${item.content.slice(0,40)}"`);
+      } catch (err) {
+        console.error(`[outbox] fallo enviando a ${jid}:`, err instanceof Error ? err.message : err);
+      }
+    }
+  }, 2000);
+}
+
+export async function start(): Promise<void> {
+  if (isStarting) {
+    console.log("[bot] start() ya en curso, ignorando llamada duplicada");
+    return;
+  }
+  isStarting = true;
+  clearReconnectTimer();
+
+  let version: [number, number, number] | undefined;
+  try {
+    const fetched = await fetchLatestBaileysVersion();
+    version = fetched.version;
+  } catch (err) {
+    console.warn("[bot] No se pudo obtener última versión Baileys:", err);
+  }
+
+  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+
+  const sock = makeWASocket({
+    version,
+    auth: state,
+    logger,
+    browser: Browsers.macOS("Desktop"),
+    printQRInTerminal: false,
+  });
+
+  isStarting = false;
+
+  sock.ev.on("creds.update", saveCreds);
+
+  sock.ev.on("connection.update", async (update) => {
+    const { connection, lastDisconnect, qr } = update;
+
+    if (qr) {
+      qrcodeTerminal.generate(qr, { small: true });
+      try {
+        const qrDataUrl = await qrcode.toDataURL(qr);
+        setConnectionState({ status: "qr", qr_string: qrDataUrl, phone: null });
+      } catch {
+        setConnectionState({ status: "qr", qr_string: qr, phone: null });
+      }
+    }
+
+    if (connection === "connecting") {
+      const current = (await import("../db")).getConnectionState();
+      if (current.status === "disconnected" || current.status === "qr") {
+        setConnectionState({ status: "connecting" });
+      }
+    }
+
+    if (connection === "open") {
+      const phone = sock.user?.id?.split(":")[0] ?? null;
+      setConnectionState({ status: "connected", qr_string: null, phone });
+      console.log("[bot] Conectado:", phone);
+
+      cleanupHandle();
+      const outboxInterval = await startOutboxPoller(sock);
+      handle = { sock, outboxInterval };
+    }
+
+    if (connection === "close") {
+      const code = (lastDisconnect?.error as Boom)?.output?.statusCode;
+      console.log("[bot] Conexión cerrada, código:", code);
+
+      // Logged out or auth revoked — need fresh QR, don't reconnect with same creds
+      if (code === DisconnectReason.loggedOut || code === 401) {
+        cleanupHandle();
+        clearAuth();
+        setConnectionState({ status: "disconnected", qr_string: null, phone: null });
+        clearReconnectTimer();
+        reconnectTimer = setTimeout(() => start(), 3000);
+        return;
+      }
+
+      // Conflict (440) — another WA Web session is active. Clear auth and start fresh.
+      if (code === 440) {
+        cleanupHandle();
+        clearAuth();
+        setConnectionState({ status: "disconnected", qr_string: null, phone: null });
+        console.log("[bot] Conflicto 440: esperando 20s antes de reintentar...");
+        clearReconnectTimer();
+        reconnectTimer = setTimeout(() => start(), 20000);
+        return;
+      }
+
+      // Other disconnects — reconnect with existing creds
+      cleanupHandle();
+      clearReconnectTimer();
+      reconnectTimer = setTimeout(() => start(), 5000);
+    }
+  });
+
+  sock.ev.on("messages.upsert", async ({ messages, type }) => {
+    console.log(`[bot] messages.upsert type=${type} count=${messages.length}`);
+    if (type !== "notify" && type !== "append") return;
+    const nowSec = Math.floor(Date.now() / 1000);
+    for (const msg of messages) {
+      const msgTime = (msg.messageTimestamp as number) ?? 0;
+      console.log(`[bot]   msg from=${msg.key.remoteJid} fromMe=${msg.key.fromMe} hasText=${!!(msg.message?.conversation || msg.message?.extendedTextMessage)}`);
+      if (type === "append" && nowSec - msgTime > 60) continue;
+      await handleIncomingMessage(sock, msg);
+    }
+  });
+}
+
+export async function shutdown(): Promise<void> {
+  clearReconnectTimer();
+  cleanupHandle();
+  isStarting = false;
+  setConnectionState({ status: "disconnected", qr_string: null, phone: null });
+}
