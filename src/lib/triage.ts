@@ -7,7 +7,7 @@ export async function triageMessage(message: string): Promise<"handle" | "escala
 
   try {
     const response = await openrouterClient.chat.completions.create({
-      model: process.env.TRIAGE_MODEL ?? "meta-llama/llama-3.1-8b-instruct:free",
+      model: process.env.TRIAGE_MODEL ?? "meta-llama/llama-3.3-70b-instruct:free",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: message },
