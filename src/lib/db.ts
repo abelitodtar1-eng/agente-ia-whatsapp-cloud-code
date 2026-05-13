@@ -156,6 +156,11 @@ export function deleteConversation(conversationId: number): void {
   db.prepare("DELETE FROM conversations WHERE id = ?").run(conversationId);
 }
 
+export function updateConversationName(id: number, name: string): void {
+  db.prepare("UPDATE conversations SET name = ? WHERE id = ?").run(name.trim() || null, id);
+}
+
+
 export function getConversationById(id: number): Conversation | undefined {
   return db.prepare("SELECT * FROM conversations WHERE id = ?").get(id) as Conversation | undefined;
 }
