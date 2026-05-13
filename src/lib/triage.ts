@@ -46,6 +46,8 @@ export async function triageMessage(message: string): Promise<"handle" | "escala
     return "handle";
   }
 
+  if (!process.env.OLLAMA_BASE_URL) return "handle";
+
   const { text: systemPrompt } = getSystemPrompt();
   if (!systemPrompt?.trim()) return "handle";
 

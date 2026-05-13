@@ -79,7 +79,7 @@ db.exec(`
   );
 
   INSERT OR IGNORE INTO settings (key, value) VALUES ('system_prompt', '__INITIAL__');
-  INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_url', 'https://dtar-n8n.oj16f5.easypanel.host/webhook/33c121cd-ad30-4531-b77a-237170f34098');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_url', '');
 `);
 
 
