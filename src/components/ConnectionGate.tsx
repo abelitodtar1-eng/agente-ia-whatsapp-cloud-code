@@ -6,6 +6,7 @@ import { ConversationList } from "./ConversationList";
 import { ConversationPanel } from "./ConversationPanel";
 import { ContactsView } from "./ContactsView";
 import { WebhookView } from "./WebhookView";
+import { DashboardView } from "./DashboardView";
 
 interface Conversation {
   id: number;
@@ -21,7 +22,7 @@ interface ConnectionState {
   phone: string | null;
 }
 
-type Tab = "conversations" | "contacts" | "webhook";
+type Tab = "conversations" | "contacts" | "webhook" | "dashboard";
 
 export function ConnectionGate() {
   const [connected, setConnected] = useState(false);
@@ -147,9 +148,23 @@ export function ConnectionGate() {
         >
           Webhook
         </button>
+        <button
+          onClick={() => setTab("dashboard")}
+          className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            tab === "dashboard"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Dashboard
+        </button>
       </div>
 
-      {tab === "webhook" ? (
+      {tab === "dashboard" ? (
+        <div className="flex-1 overflow-hidden">
+          <DashboardView />
+        </div>
+      ) : tab === "webhook" ? (
         <div className="flex-1 overflow-hidden">
           <WebhookView />
         </div>
