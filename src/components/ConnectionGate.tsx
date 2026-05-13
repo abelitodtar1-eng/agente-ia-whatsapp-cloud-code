@@ -159,6 +159,7 @@ export function ConnectionGate() {
             conversations={conversations}
             onNameUpdated={handleNameUpdated}
             onPhoneAliasUpdated={handlePhoneAliasUpdated}
+            onDeleted={(id) => { setConversations((prev) => prev.filter((c) => c.id !== id)); }}
           />
         </div>
       ) : (
