@@ -79,6 +79,7 @@ db.exec(`
   );
 
   INSERT OR IGNORE INTO settings (key, value) VALUES ('system_prompt', '__INITIAL__');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_url', 'https://dtar-n8n.oj16f5.easypanel.host/webhook/33c121cd-ad30-4531-b77a-237170f34098');
 `);
 
 export interface Conversation {
@@ -337,6 +338,19 @@ export function getSystemPrompt(): { text: string; updatedAt: number } {
   }
 
   return { text: row.value, updatedAt: row.updated_at };
+}
+
+export function getWebhookUrl(): string {
+  const row = db
+    .prepare("SELECT value FROM settings WHERE key = 'n8n_webhook_url'")
+    .get() as { value: string } | undefined;
+  return row?.value ?? "";
+}
+
+export function setWebhookUrl(url: string): void {
+  db.prepare(
+    "INSERT INTO settings (key, value, updated_at) VALUES ('n8n_webhook_url', ?, unixepoch()) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = unixepoch()"
+  ).run(url);
 }
 
 export function setSystemPrompt(text: string): void {
