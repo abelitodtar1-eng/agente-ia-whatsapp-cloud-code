@@ -125,7 +125,7 @@ export function WebhookView() {
           <ul className="text-xs text-gray-500 space-y-1 list-disc list-inside">
             <li>Cada mensaje entrante de WhatsApp hace un POST a esta URL</li>
             <li>El body es <code className="bg-gray-100 px-1 rounded">{"{ phone, message }"}</code></li>
-            <li>El webhook debe responder <code className="bg-gray-100 px-1 rounded">{"{ response: "..." }"}</code></li>
+            <li>El webhook debe responder <code className="bg-gray-100 px-1 rounded">{'{ response: "..." }'}</code></li>
             <li>Tiempo máximo de respuesta: 60 segundos</li>
           </ul>
           {saved && (
