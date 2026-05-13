@@ -82,6 +82,11 @@ db.exec(`
   INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_url', 'https://dtar-n8n.oj16f5.easypanel.host/webhook/33c121cd-ad30-4531-b77a-237170f34098');
 `);
 
+
+// Migrations — safe to run on every startup (no-op if column already exists)
+try { db.exec("ALTER TABLE conversations ADD COLUMN phone_alias TEXT"); } catch {}
+try { db.exec("ALTER TABLE conversations ADD COLUMN last_message_at INTEGER"); } catch {}
+
 export interface Conversation {
   id: number;
   phone: string;
