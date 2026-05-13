@@ -7,6 +7,15 @@ const ollamaClient = new OpenAI({
   fetch: globalThis.fetch.bind(globalThis),
 });
 
+const HANDLE_KEYWORDS = [
+  "registra", "registro", "entrada", "salida", "ajuste",
+  "stock", "inventario", "producto", "productos", "precio",
+  "kardex", "busca", "buscar", "código", "codigo", "sku",
+  "cuanto hay", "cuánto hay", "cuanto queda", "cuánto queda",
+  "categoría", "categoria", "almacén", "almacen",
+  "nuevo producto", "agregar producto",
+];
+
 const ESCALATE_KEYWORDS = [
   "hablar con", "habla con", "quiero una persona", "persona real",
   "agente humano", "agente real", "supervisor", "encargado",
@@ -21,10 +30,20 @@ function keywordEscalate(message: string): boolean {
   return ESCALATE_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+function keywordHandle(message: string): boolean {
+  const lower = message.toLowerCase();
+  return HANDLE_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 export async function triageMessage(message: string): Promise<"handle" | "escalate"> {
   if (keywordEscalate(message)) {
     console.log("[triage] keyword match → escalate");
     return "escalate";
+  }
+
+  if (keywordHandle(message)) {
+    console.log("[triage] handle keyword → handle");
+    return "handle";
   }
 
   const { text: systemPrompt } = getSystemPrompt();
