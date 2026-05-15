@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { QRScreen } from "./QRScreen";
 import { DashboardHeader } from "./DashboardHeader";
 import { ConversationList } from "./ConversationList";
@@ -25,12 +26,23 @@ interface ConnectionState {
 type Tab = "conversations" | "contacts" | "webhook" | "dashboard";
 
 export function ConnectionGate() {
+  const router = useRouter();
   const [connected, setConnected] = useState(false);
   const [phone, setPhone] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [checking, setChecking] = useState(true);
   const [tab, setTab] = useState<Tab>("conversations");
+  const [me, setMe] = useState<{ username: string; role: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me").then(r => r.ok ? r.json() : null).then(data => { if (data) setMe(data); });
+  }, []);
+
+  async function handleAuthLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
 
   useEffect(() => {
     fetch("/api/connection/status")
@@ -104,6 +116,22 @@ export function ConnectionGate() {
 
   return (
     <div className="flex flex-col h-screen">
+      {/* User bar */}
+      {me && (
+        <div style={{ background: "#12141e", borderBottom: "1px solid #2a2d3e", padding: "5px 20px", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 14, flexShrink: 0 }}>
+          <span style={{ fontSize: 11, color: "#8892a4" }}>
+            {me.username} · <span style={{ color: "#6c63ff" }}>{me.role === "admin" ? "Administrador" : "Operador"}</span>
+          </span>
+          {me.role === "admin" && (
+            <a href="/admin" style={{ fontSize: 11, color: "#6c63ff", textDecoration: "none", padding: "2px 10px", borderRadius: 20, border: "1px solid rgba(108,99,255,.3)" }}>
+              Panel Admin
+            </a>
+          )}
+          <button onClick={handleAuthLogout} style={{ fontSize: 11, color: "#ff6b6b", background: "transparent", border: "1px solid rgba(255,107,107,.2)", padding: "2px 10px", borderRadius: 20, cursor: "pointer" }}>
+            Salir
+          </button>
+        </div>
+      )}
       <DashboardHeader
         phone={phone}
         onDisconnect={handleDisconnect}

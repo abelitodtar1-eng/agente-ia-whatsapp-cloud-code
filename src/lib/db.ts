@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
+import { scryptSync, randomBytes } from "node:crypto";
 
 const DATA_DIR = path.resolve(process.cwd(), "data");
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -82,6 +83,34 @@ db.exec(`
   INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_url', '');
 `);
 
+
+// ─── Auth tables ─────────────────────────────────────────────────────────────
+db.prepare(`CREATE TABLE IF NOT EXISTS users (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  username      TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role          TEXT CHECK(role IN ('admin','operator')) NOT NULL DEFAULT 'operator',
+  created_at    INTEGER NOT NULL DEFAULT (unixepoch()),
+  last_login    INTEGER
+)`).run();
+
+db.prepare(`CREATE TABLE IF NOT EXISTS sessions (
+  id         TEXT PRIMARY KEY,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+)`).run();
+
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)`).run();
+
+// Seed default admin on first run
+const _userCount = (db.prepare("SELECT COUNT(*) as c FROM users").get() as { c: number }).c;
+if (_userCount === 0) {
+  const _salt = randomBytes(16).toString("hex");
+  const _hash = scryptSync("Admin2026*", _salt, 64).toString("hex");
+  db.prepare("INSERT OR IGNORE INTO users (username, password_hash, role) VALUES (?, ?, 'admin')")
+    .run("admin", `${_salt}:${_hash}`);
+}
 
 // Migrations — safe to run on every startup (no-op if column already exists)
 try { db.exec("ALTER TABLE conversations ADD COLUMN phone_alias TEXT"); } catch {}
