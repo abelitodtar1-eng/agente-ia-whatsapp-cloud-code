@@ -42,18 +42,21 @@ function KpiCard({ icon, label, value, accent }: { icon: string; label: string; 
 }
 
 export function HomeView({ onGoToConversation }: { onGoToConversation: (id: number) => void }) {
+  const todayStr = new Date().toISOString().slice(0, 10);
   const [home, setHome] = useState<HomeData | null>(null);
   const [rates, setRates] = useState<Rates | null>(null);
   const [criticals, setCriticals] = useState<CriticalProduct[]>([]);
   const [totalProductos, setTotalProductos] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState(todayStr);
 
   useEffect(() => {
-    fetch("/api/home").then(r => r.ok ? r.json() : null).then((d: HomeData | null) => setHome(d));
+    fetch(`/api/home?date=${selectedDate}`).then(r => r.ok ? r.json() : null).then((d: HomeData | null) => setHome(d));
+  }, [selectedDate]);
+
+  useEffect(() => {
     fetch("/api/rates").then(r => r.ok ? r.json() : null).then((d: Rates | null) => setRates(d));
     fetch("/api/dashboard").then(r => r.ok ? r.json() : null).then((d: { productos?: CriticalProduct[]; kpis?: { totalProductos?: number } } | null) => {
-      if (d?.productos) {
-        setCriticals(d.productos.filter(p => p.urgencia === "CRITICO" || p.urgencia === "COMPRAR"));
-      }
+      if (d?.productos) setCriticals(d.productos.filter(p => p.urgencia === "CRITICO" || p.urgencia === "COMPRAR"));
       if (d?.kpis?.totalProductos != null) setTotalProductos(d.kpis.totalProductos);
     });
   }, []);
@@ -70,7 +73,29 @@ export function HomeView({ onGoToConversation }: { onGoToConversation: (id: numb
           {rates.USD != null && <span style={{ fontSize: 14, fontWeight: 700, color: TEAL, background: "rgba(0,212,170,.1)", padding: "3px 12px", borderRadius: 20 }}>$ {rates.USD.toFixed(0)}</span>}
           {rates.EUR != null && <span style={{ fontSize: 14, fontWeight: 700, color: PRP, background: "rgba(108,99,255,.1)", padding: "3px 12px", borderRadius: 20 }}>€ {rates.EUR.toFixed(0)}</span>}
           {rates.MLC != null && <span style={{ fontSize: 14, fontWeight: 700, color: YELL, background: "rgba(255,209,102,.1)", padding: "3px 12px", borderRadius: 20 }}>MLC {rates.MLC.toFixed(0)}</span>}
-          <span style={{ fontSize: 16, fontWeight: 600, color: TEXT, marginLeft: "auto" }}>{new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}</span>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 16, fontWeight: 600, color: TEXT }}>
+              {new Date(selectedDate + "T12:00:00").toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+            </span>
+            <input
+              type="date"
+              value={selectedDate}
+              max={todayStr}
+              onChange={e => setSelectedDate(e.target.value)}
+              style={{
+                background: CARD, border: `1px solid ${BORD}`, borderRadius: 8,
+                padding: "4px 10px", color: TEXT, fontSize: 12, outline: "none", cursor: "pointer",
+              }}
+            />
+            {selectedDate !== todayStr && (
+              <button
+                onClick={() => setSelectedDate(todayStr)}
+                style={{ fontSize: 11, color: TEAL, background: "rgba(0,212,170,.1)", border: `1px solid rgba(0,212,170,.2)`, borderRadius: 8, padding: "4px 10px", cursor: "pointer" }}
+              >
+                Hoy
+              </button>
+            )}
+          </div>
         </div>
       )}
 
