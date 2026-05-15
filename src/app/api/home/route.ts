@@ -23,5 +23,10 @@ export async function GET() {
     `SELECT COUNT(*) as count FROM payments WHERE status = 'pending'`
   ).get() as { count: number };
 
-  return NextResponse.json({ unreadTotal, conversations, pendingPayments, pendingCount });
+  const todayStart = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
+  const { count: ventasHoy, total: ventasTotal } = db.prepare(
+    `SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'completed' AND created_at >= ?`
+  ).get(todayStart) as { count: number; total: number };
+
+  return NextResponse.json({ unreadTotal, conversations, pendingPayments, pendingCount, ventasHoy, ventasTotal });
 }

@@ -16,6 +16,7 @@ interface PendingPayment {
 interface HomeData {
   unreadTotal: number; conversations: HomeConv[];
   pendingPayments: PendingPayment[]; pendingCount: number;
+  ventasHoy: number; ventasTotal: number;
 }
 interface Rates { USD: number | null; MLC: number | null; EUR: number | null }
 interface CriticalProduct { DESCRIPCIÓN: string; diasRestantes: number | null; urgencia: string }
@@ -66,17 +67,17 @@ export function HomeView({ onGoToConversation }: { onGoToConversation: (id: numb
           {rates.USD != null && <span style={{ fontSize: 14, fontWeight: 700, color: TEAL, background: "rgba(0,212,170,.1)", padding: "3px 12px", borderRadius: 20 }}>$ {rates.USD.toFixed(0)}</span>}
           {rates.EUR != null && <span style={{ fontSize: 14, fontWeight: 700, color: PRP, background: "rgba(108,99,255,.1)", padding: "3px 12px", borderRadius: 20 }}>€ {rates.EUR.toFixed(0)}</span>}
           {rates.MLC != null && <span style={{ fontSize: 14, fontWeight: 700, color: YELL, background: "rgba(255,209,102,.1)", padding: "3px 12px", borderRadius: 20 }}>MLC {rates.MLC.toFixed(0)}</span>}
-          <span style={{ fontSize: 10, color: MUTED, marginLeft: "auto" }}>{new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}</span>
+          <span style={{ fontSize: 16, fontWeight: 600, color: TEXT, marginLeft: "auto" }}>{new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}</span>
         </div>
       )}
 
-      <div style={{ padding: "20px 24px", maxWidth: 960, margin: "0 auto" }}>
+      <div style={{ padding: "20px 24px" }}>
 
         {/* KPI row */}
         <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
           <KpiCard icon="📨" label="Sin leer" value={home?.unreadTotal ?? "—"} accent={home?.unreadTotal ? RED : TEAL} />
           <KpiCard icon="💳" label="Cobros pendientes" value={home?.pendingCount ?? "—"} accent={home?.pendingCount ? YELL : TEAL} />
-          <KpiCard icon="🔴" label="Productos críticos" value={criticals.filter(p => p.urgencia === "CRITICO").length || "—"} accent={criticals.some(p => p.urgencia === "CRITICO") ? RED : TEAL} />
+          <KpiCard icon="🛒" label="Ventas (Hoy)" value={home?.ventasHoy ?? "—"} accent={home?.ventasHoy ? TEAL : MUTED} />
           <KpiCard icon="📦" label="Comprar esta semana" value={criticals.filter(p => p.urgencia === "COMPRAR").length || "—"} accent={YELL} />
         </div>
 
