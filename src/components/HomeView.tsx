@@ -66,38 +66,31 @@ export function HomeView({ onGoToConversation }: { onGoToConversation: (id: numb
   return (
     <div style={{ height: "100%", overflowY: "auto", background: BG, color: TEXT, fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
 
-      {/* Rates bar */}
-      {rates && (
-        <div style={{ background: "#12141e", borderBottom: `1px solid ${BORD}`, padding: "8px 24px", display: "flex", gap: 12, alignItems: "center" }}>
-          <span style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: ".5px" }}>El Toque hoy</span>
-          {rates.USD != null && <span style={{ fontSize: 14, fontWeight: 700, color: TEAL, background: "rgba(0,212,170,.1)", padding: "3px 12px", borderRadius: 20 }}>$ {rates.USD.toFixed(0)}</span>}
-          {rates.EUR != null && <span style={{ fontSize: 14, fontWeight: 700, color: PRP, background: "rgba(108,99,255,.1)", padding: "3px 12px", borderRadius: 20 }}>€ {rates.EUR.toFixed(0)}</span>}
-          {rates.MLC != null && <span style={{ fontSize: 14, fontWeight: 700, color: YELL, background: "rgba(255,209,102,.1)", padding: "3px 12px", borderRadius: 20 }}>MLC {rates.MLC.toFixed(0)}</span>}
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 16, fontWeight: 600, color: TEXT }}>
-              {new Date(selectedDate + "T12:00:00").toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
-            </span>
-            <input
-              type="date"
-              value={selectedDate}
-              max={todayStr}
-              onChange={e => setSelectedDate(e.target.value)}
-              style={{
-                background: CARD, border: `1px solid ${BORD}`, borderRadius: 8,
-                padding: "4px 10px", color: TEXT, fontSize: 12, outline: "none", cursor: "pointer",
-              }}
-            />
-            {selectedDate !== todayStr && (
-              <button
-                onClick={() => setSelectedDate(todayStr)}
-                style={{ fontSize: 11, color: TEAL, background: "rgba(0,212,170,.1)", border: `1px solid rgba(0,212,170,.2)`, borderRadius: 8, padding: "4px 10px", cursor: "pointer" }}
-              >
-                Hoy
-              </button>
-            )}
-          </div>
+      {/* Top bar — siempre visible */}
+      <div style={{ background: "#12141e", borderBottom: `1px solid ${BORD}`, padding: "8px 24px", display: "flex", gap: 12, alignItems: "center" }}>
+        <span style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: ".5px" }}>El Toque</span>
+        {rates?.USD != null && <span style={{ fontSize: 14, fontWeight: 700, color: TEAL, background: "rgba(0,212,170,.1)", padding: "3px 12px", borderRadius: 20 }}>$ {rates.USD.toFixed(0)}</span>}
+        {rates?.EUR != null && <span style={{ fontSize: 14, fontWeight: 700, color: PRP, background: "rgba(108,99,255,.1)", padding: "3px 12px", borderRadius: 20 }}>€ {rates.EUR.toFixed(0)}</span>}
+        {rates?.MLC != null && <span style={{ fontSize: 14, fontWeight: 700, color: YELL, background: "rgba(255,209,102,.1)", padding: "3px 12px", borderRadius: 20 }}>MLC {rates.MLC.toFixed(0)}</span>}
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 16, fontWeight: 600, color: TEXT }}>
+            {new Date(selectedDate + "T12:00:00").toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+          </span>
+          <input
+            type="date"
+            value={selectedDate}
+            max={todayStr}
+            onChange={e => setSelectedDate(e.target.value)}
+            style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 8, padding: "4px 10px", color: TEXT, fontSize: 12, outline: "none", cursor: "pointer" }}
+          />
+          {selectedDate !== todayStr && (
+            <button
+              onClick={() => setSelectedDate(todayStr)}
+              style={{ fontSize: 11, color: TEAL, background: "rgba(0,212,170,.1)", border: `1px solid rgba(0,212,170,.2)`, borderRadius: 8, padding: "4px 10px", cursor: "pointer" }}
+            >Hoy</button>
+          )}
         </div>
-      )}
+      </div>
 
       <div style={{ padding: "20px 24px" }}>
 
