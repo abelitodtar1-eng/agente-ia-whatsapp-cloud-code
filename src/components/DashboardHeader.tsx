@@ -56,7 +56,7 @@ export function DashboardHeader({ phone, onDisconnect, selectedConversation, onM
             }}
           >
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: selectedConversation.mode === "AI" ? TEAL : YELL }} />
-            {selectedConversation.mode === "AI" ? "Prompt IA" : "Modo humano"}
+            {selectedConversation.mode === "AI" ? "IA activo" : "Modo humano"}
           </button>
         )}
         {phone && <span style={{ fontSize: 11, color: MUTED }}>+{phone}</span>}
