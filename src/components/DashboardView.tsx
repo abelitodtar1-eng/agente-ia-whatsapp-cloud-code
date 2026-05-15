@@ -59,9 +59,7 @@ const MUTED = "#8892a4";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmtK(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`;
-  return n.toFixed(0);
+  return Math.round(n).toLocaleString("es-ES");
 }
 function fmt2(n: number) {
   return n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

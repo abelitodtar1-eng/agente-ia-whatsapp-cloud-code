@@ -135,7 +135,7 @@ export function HomeView({ onGoToConversation }: { onGoToConversation: (id: numb
                     {p.contact_name ?? p.phone_alias ?? p.contact_phone} · {timeAgo(p.created_at)}
                   </div>
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: YELL }}>{p.amount.toFixed(0)} CUP</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: YELL }}>{Math.round(p.amount).toLocaleString("es-ES")} CUP</span>
               </div>
             ))}
           </div>

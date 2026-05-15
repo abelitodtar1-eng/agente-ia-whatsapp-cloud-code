@@ -176,7 +176,7 @@ export function ConversationPanel({ conversation, onModeChange, onDelete }: Conv
               <span style={{ color: statusColor[p.status], fontWeight: 700 }}>●</span>
               <span style={{ color: TEXT }}>{p.description}</span>
               <span style={{ color: MUTED }}>·</span>
-              <span style={{ color: TEXT, fontWeight: 600 }}>{p.amount.toFixed(2)} CUP</span>
+              <span style={{ color: TEXT, fontWeight: 600 }}>{p.amount.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CUP</span>
               <span style={{ color: statusColor[p.status] }}>{statusLabel[p.status]}</span>
               {p.status === "pending" && p.link_confirm && (
                 <a href={p.link_confirm} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: PRP, marginLeft: 2 }}>ver link</a>
