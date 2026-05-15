@@ -8,6 +8,7 @@ import { ConversationPanel } from "./ConversationPanel";
 import { ContactsView } from "./ContactsView";
 import { WebhookView } from "./WebhookView";
 import { DashboardView } from "./DashboardView";
+import { ChatbotView } from "./ChatbotView";
 
 interface Conversation {
   id: number;
@@ -24,7 +25,7 @@ interface ConnectionState {
   phone: string | null;
 }
 
-type Tab = "conversations" | "contacts" | "webhook" | "dashboard";
+type Tab = "conversations" | "contacts" | "webhook" | "dashboard" | "chat";
 
 export function ConnectionGate() {
   const router = useRouter();
@@ -129,6 +130,7 @@ export function ConnectionGate() {
     { key: "contacts", label: "Contactos" },
     { key: "webhook", label: "Webhook" },
     { key: "dashboard", label: "Dashboard" },
+    { key: "chat", label: "Chat IA" },
   ];
 
   return (
@@ -180,7 +182,11 @@ export function ConnectionGate() {
         ))}
       </div>
 
-      {tab === "dashboard" ? (
+      {tab === "chat" ? (
+        <div style={{ flex: 1, overflow: "hidden" }}>
+          <ChatbotView />
+        </div>
+      ) : tab === "dashboard" ? (
         <div style={{ flex: 1, overflow: "hidden" }}>
           <DashboardView />
         </div>
