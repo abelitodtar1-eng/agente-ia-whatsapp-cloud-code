@@ -9,6 +9,7 @@ import { ContactsView } from "./ContactsView";
 import { WebhookView } from "./WebhookView";
 import { DashboardView } from "./DashboardView";
 import { ChatbotView } from "./ChatbotView";
+import { HomeView } from "./HomeView";
 
 interface Conversation {
   id: number;
@@ -25,7 +26,7 @@ interface ConnectionState {
   phone: string | null;
 }
 
-type Tab = "conversations" | "contacts" | "webhook" | "dashboard" | "chat";
+type Tab = "home" | "conversations" | "contacts" | "webhook" | "dashboard" | "chat";
 
 export function ConnectionGate() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export function ConnectionGate() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [checking, setChecking] = useState(true);
-  const [tab, setTab] = useState<Tab>("conversations");
+  const [tab, setTab] = useState<Tab>("home");
   const [me, setMe] = useState<{ username: string; role: string } | null>(null);
 
   useEffect(() => {
@@ -125,8 +126,11 @@ export function ConnectionGate() {
 
   const selectedConversation = conversations.find((c) => c.id === selectedId) ?? null;
 
-  const TABS: { key: Tab; label: string }[] = [
-    { key: "conversations", label: "Conversaciones" },
+  const totalUnread = conversations.reduce((s, c) => s + c.unread_count, 0);
+
+  const TABS: { key: Tab; label: string; badge?: number }[] = [
+    { key: "home", label: "Inicio" },
+    { key: "conversations", label: "Conversaciones", badge: totalUnread },
     { key: "contacts", label: "Contactos" },
     { key: "webhook", label: "Webhook" },
     { key: "dashboard", label: "Dashboard" },
@@ -166,7 +170,7 @@ export function ConnectionGate() {
 
       {/* Tab bar */}
       <div style={{ display: "flex", borderBottom: "1px solid #2a2d3e", background: "#1a1d27", flexShrink: 0 }}>
-        {TABS.map(({ key, label }) => (
+        {TABS.map(({ key, label, badge }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -174,15 +178,24 @@ export function ConnectionGate() {
               padding: "10px 20px", fontSize: 12, fontWeight: 600, border: "none",
               borderBottom: tab === key ? "2px solid #6c63ff" : "2px solid transparent",
               background: "transparent", color: tab === key ? "#6c63ff" : "#8892a4",
-              cursor: "pointer", transition: "color .15s",
+              cursor: "pointer", transition: "color .15s", display: "flex", alignItems: "center", gap: 6,
             }}
           >
             {label}
+            {badge ? (
+              <span style={{ background: "#ff6b6b", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: "50%", minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>
+                {badge}
+              </span>
+            ) : null}
           </button>
         ))}
       </div>
 
-      {tab === "chat" ? (
+      {tab === "home" ? (
+        <div style={{ flex: 1, overflow: "hidden" }}>
+          <HomeView onGoToConversation={(id) => { handleSelect(id); setTab("conversations"); }} />
+        </div>
+      ) : tab === "chat" ? (
         <div style={{ flex: 1, overflow: "hidden" }}>
           <ChatbotView />
         </div>
