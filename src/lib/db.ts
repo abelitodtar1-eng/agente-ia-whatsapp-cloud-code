@@ -112,6 +112,23 @@ if (_userCount === 0) {
     .run("admin", `${_salt}:${_hash}`);
 }
 
+// ─── Payments table ──────────────────────────────────────────────────────────
+db.prepare(`CREATE TABLE IF NOT EXISTS payments (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversation_id  INTEGER NOT NULL REFERENCES conversations(id),
+  transaction_uuid TEXT UNIQUE NOT NULL,
+  merchant_op_id   TEXT NOT NULL,
+  amount           REAL NOT NULL,
+  description      TEXT NOT NULL,
+  status           TEXT CHECK(status IN ('pending','completed','cancelled','failed')) NOT NULL DEFAULT 'pending',
+  link_confirm     TEXT,
+  created_at       INTEGER NOT NULL DEFAULT (unixepoch())
+)`).run();
+
+db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('enzona_consumer_key', '')`).run();
+db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('enzona_consumer_secret', '')`).run();
+db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('enzona_merchant_uuid', '')`).run();
+
 // Migrations — safe to run on every startup (no-op if column already exists)
 try { db.exec("ALTER TABLE conversations ADD COLUMN phone_alias TEXT"); } catch {}
 try { db.exec("ALTER TABLE conversations ADD COLUMN last_message_at INTEGER"); } catch {}
@@ -400,6 +417,50 @@ export function setSystemPrompt(text: string): void {
   db.prepare(
     "UPDATE settings SET value = ?, updated_at = unixepoch() WHERE key = 'system_prompt'"
   ).run(text);
+}
+
+// ─── Enzona settings ─────────────────────────────────────────────────────────
+function getSetting(key: string): string {
+  return (db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as { value: string } | undefined)?.value ?? "";
+}
+function setSetting(key: string, value: string): void {
+  db.prepare("INSERT INTO settings (key,value,updated_at) VALUES (?,?,unixepoch()) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=unixepoch()").run(key, value);
+}
+
+export function getEnzonaConfig(): { consumerKey: string; consumerSecret: string; merchantUuid: string } {
+  return { consumerKey: getSetting("enzona_consumer_key"), consumerSecret: getSetting("enzona_consumer_secret"), merchantUuid: getSetting("enzona_merchant_uuid") };
+}
+export function setEnzonaConfig(consumerKey: string, consumerSecret: string, merchantUuid: string): void {
+  setSetting("enzona_consumer_key", consumerKey);
+  setSetting("enzona_consumer_secret", consumerSecret);
+  setSetting("enzona_merchant_uuid", merchantUuid);
+}
+
+// ─── Payments ────────────────────────────────────────────────────────────────
+export interface Payment {
+  id: number;
+  conversation_id: number;
+  transaction_uuid: string;
+  merchant_op_id: string;
+  amount: number;
+  description: string;
+  status: "pending" | "completed" | "cancelled" | "failed";
+  link_confirm: string | null;
+  created_at: number;
+}
+
+export function createPaymentRecord(p: { conversationId: number; transactionUuid: string; merchantOpId: string; amount: number; description: string; linkConfirm: string }): Payment {
+  return db.prepare(
+    "INSERT INTO payments (conversation_id,transaction_uuid,merchant_op_id,amount,description,link_confirm) VALUES (?,?,?,?,?,?) RETURNING *"
+  ).get(p.conversationId, p.transactionUuid, p.merchantOpId, p.amount, p.description, p.linkConfirm) as Payment;
+}
+
+export function getPaymentsByConversation(conversationId: number): Payment[] {
+  return db.prepare("SELECT * FROM payments WHERE conversation_id = ? ORDER BY created_at DESC").all(conversationId) as Payment[];
+}
+
+export function updatePaymentStatus(transactionUuid: string, status: Payment["status"]): void {
+  db.prepare("UPDATE payments SET status = ? WHERE transaction_uuid = ?").run(status, transactionUuid);
 }
 
 export default db;
