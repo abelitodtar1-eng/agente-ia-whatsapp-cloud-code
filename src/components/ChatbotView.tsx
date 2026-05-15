@@ -13,6 +13,43 @@ function genSessionId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
+function printReceipt(content: string) {
+  const now = new Date().toLocaleString("es-ES", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const escaped = content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const html = [
+    "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Comprobante DTAR</title><style>",
+    "* { margin:0; padding:0; box-sizing:border-box; }",
+    "body { font-family:'Courier New',monospace; font-size:12px; padding:20px; background:#fff; color:#000; }",
+    ".receipt { max-width:320px; margin:0 auto; }",
+    ".header { text-align:center; border-bottom:2px dashed #000; padding-bottom:10px; margin-bottom:10px; }",
+    ".header h1 { font-size:16px; font-weight:bold; letter-spacing:2px; }",
+    ".header p { font-size:10px; margin-top:3px; }",
+    ".label { font-size:10px; font-weight:bold; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }",
+    ".content { white-space:pre-wrap; line-height:1.6; padding:10px 0; border-bottom:2px dashed #000; }",
+    ".footer { text-align:center; margin-top:10px; font-size:10px; }",
+    "@media print { body { padding:0; } }",
+    "</style></head><body>",
+    "<div class='receipt'>",
+    "<div class='header'><h1>DTAR CRM</h1><p>Respuesta del Asistente IA</p><p>" + now + "</p></div>",
+    "<p class='label'>Contenido:</p>",
+    "<div class='content'>" + escaped + "</div>",
+    "<div class='footer'><p>— Sistema Interno DTAR —</p></div>",
+    "</div></body></html>",
+  ].join("");
+
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, "_blank", "width=420,height=600");
+  if (w) {
+    w.addEventListener("load", () => { w.print(); URL.revokeObjectURL(url); }, { once: true });
+  } else {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export function ChatbotView() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -111,7 +148,22 @@ export function ChatbotView() {
                   <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: "16px 16px 16px 4px", padding: "10px 14px" }}>
                     <p style={{ fontSize: 13, color: TEXT, whiteSpace: "pre-wrap", margin: 0 }}>{m.content}</p>
                   </div>
-                  <p style={{ fontSize: 10, color: MUTED, marginTop: 3, marginLeft: 4 }}>Bot</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, marginLeft: 4 }}>
+                    <p style={{ fontSize: 10, color: MUTED, margin: 0 }}>Bot</p>
+                    <button
+                      onClick={() => printReceipt(m.content)}
+                      title="Imprimir comprobante"
+                      style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, color: MUTED, display: "flex", alignItems: "center", opacity: .6 }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = ".6"; }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="6 9 6 2 18 2 18 9"/>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                        <rect x="6" y="14" width="12" height="8"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
