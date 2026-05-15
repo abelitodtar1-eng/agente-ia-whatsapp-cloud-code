@@ -1,6 +1,9 @@
 "use client";
 import { SystemPromptEditor } from "./SystemPromptEditor";
 
+const CARD = "#1a1d27"; const BORD = "#2a2d3e"; const PRP = "#6c63ff";
+const TEAL = "#00d4aa"; const YELL = "#ffd166"; const TEXT = "#e2e8f0"; const MUTED = "#8892a4";
+
 interface Conversation {
   id: number;
   phone: string;
@@ -15,12 +18,7 @@ interface DashboardHeaderProps {
   onModeChange: (mode: "AI" | "HUMAN") => void;
 }
 
-export function DashboardHeader({
-  phone,
-  onDisconnect,
-  selectedConversation,
-  onModeChange,
-}: DashboardHeaderProps) {
+export function DashboardHeader({ phone, onDisconnect, selectedConversation, onModeChange }: DashboardHeaderProps) {
   async function handleDisconnect() {
     if (!confirm("¿Desconectar el número de WhatsApp?")) return;
     await fetch("/api/connection/disconnect", { method: "POST" });
@@ -39,39 +37,32 @@ export function DashboardHeader({
   }
 
   return (
-    <header className="flex items-center justify-between px-5 py-3 bg-white border-b border-gray-200 shadow-sm">
-      <div className="flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full bg-emerald-500" />
-        <span className="text-sm font-semibold text-gray-900">CRM DTAR</span>
+    <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 20px", background: CARD, borderBottom: `1px solid ${BORD}`, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: TEAL }} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>CRM DTAR</span>
       </div>
-      <div className="flex items-center gap-3">
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <SystemPromptEditor />
         {selectedConversation && (
           <button
             onClick={handleModeToggle}
-            title={
-              selectedConversation.mode === "AI"
-                ? "El agente está activo — clic para que responda el humano"
-                : "Modo humano activo — clic para activar el agente"
-            }
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${
-              selectedConversation.mode === "AI"
-                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                : "bg-amber-100 text-amber-700 hover:bg-amber-200"
-            }`}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "5px 12px", fontSize: 11, fontWeight: 600, borderRadius: 20,
+              border: "none", cursor: "pointer",
+              background: selectedConversation.mode === "AI" ? "rgba(0,212,170,.15)" : "rgba(255,209,102,.15)",
+              color: selectedConversation.mode === "AI" ? TEAL : YELL,
+            }}
           >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                selectedConversation.mode === "AI" ? "bg-emerald-500" : "bg-amber-500"
-              }`}
-            />
-            {selectedConversation.mode === "AI" ? "Agente activo" : "Modo humano"}
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: selectedConversation.mode === "AI" ? TEAL : YELL }} />
+            {selectedConversation.mode === "AI" ? "Prompt IA" : "Modo humano"}
           </button>
         )}
-        {phone && <span className="text-xs text-gray-500">+{phone}</span>}
+        {phone && <span style={{ fontSize: 11, color: MUTED }}>+{phone}</span>}
         <button
           onClick={handleDisconnect}
-          className="px-3 py-1.5 text-sm border border-gray-300 text-gray-600 rounded hover:bg-gray-50 transition-colors"
+          style={{ padding: "5px 14px", fontSize: 11, background: "transparent", border: `1px solid ${BORD}`, color: MUTED, borderRadius: 8, cursor: "pointer" }}
         >
           Desconectar
         </button>

@@ -3,6 +3,9 @@ import { useState, useEffect, useRef } from "react";
 import { MessageBubble } from "./MessageBubble";
 import { ModeToggle } from "./ModeToggle";
 
+const BG = "#0a0c10"; const CARD = "#1a1d27"; const BORD = "#2a2d3e"; const PRP = "#6c63ff";
+const RED = "#ff6b6b"; const TEXT = "#e2e8f0"; const MUTED = "#8892a4";
+
 interface Message {
   id: number;
   role: "user" | "assistant" | "human";
@@ -30,9 +33,7 @@ export function ConversationPanel({ conversation, onModeChange, onDelete }: Conv
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    loadMessages();
-  }, [conversation.id]);
+  useEffect(() => { loadMessages(); }, [conversation.id]);
 
   useEffect(() => {
     const interval = setInterval(loadMessages, 2000);
@@ -67,53 +68,59 @@ export function ConversationPanel({ conversation, onModeChange, onDelete }: Conv
     onDelete();
   }
 
-  function handleModeChange(newMode: "AI" | "HUMAN") {
-    onModeChange(newMode);
-  }
-
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: BG }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: `1px solid ${BORD}`, background: CARD, flexShrink: 0 }}>
         <div>
-          <p className="text-sm font-semibold text-gray-900">
-            {conversation.name ?? conversation.phone}
-          </p>
-          <p className="text-xs text-gray-400">{conversation.phone}</p>
+          <p style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{conversation.name ?? conversation.phone}</p>
+          <p style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{conversation.phone}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <ModeToggle conversationId={conversation.id} mode={mode} onChange={handleModeChange} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <ModeToggle conversationId={conversation.id} mode={mode} onChange={onModeChange} />
           <button
             onClick={handleDelete}
-            className="text-xs text-red-500 hover:text-red-700 px-2 py-1 border border-red-200 rounded hover:bg-red-50 transition-colors"
+            style={{ fontSize: 11, color: RED, background: "transparent", border: `1px solid rgba(255,107,107,.25)`, padding: "4px 12px", borderRadius: 8, cursor: "pointer" }}
           >
             Borrar
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 bg-gray-50">
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px", background: BG }}>
         {messages.map((m) => (
           <MessageBubble key={m.id} role={m.role} content={m.content} createdAt={m.created_at} />
         ))}
         <div ref={bottomRef} />
       </div>
 
-      <div className="px-4 py-3 border-t border-gray-200 bg-white">
+      {/* Input */}
+      <div style={{ padding: "12px 16px", borderTop: `1px solid ${BORD}`, background: CARD, flexShrink: 0 }}>
         {mode === "AI" ? (
-          <p className="text-xs text-center text-gray-400">El bot responde automáticamente</p>
+          <p style={{ fontSize: 11, color: MUTED, textAlign: "center" }}>El bot responde automáticamente</p>
         ) : (
-          <div className="flex gap-2">
+          <div style={{ display: "flex", gap: 8 }}>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
               placeholder="Escribe un mensaje..."
-              className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+              style={{
+                flex: 1, fontSize: 13, background: BG, border: `1px solid ${BORD}`,
+                borderRadius: 8, padding: "9px 12px", color: TEXT, outline: "none",
+              }}
+              onFocus={(e) => { e.target.style.borderColor = PRP; }}
+              onBlur={(e) => { e.target.style.borderColor = BORD; }}
             />
             <button
               onClick={sendMessage}
               disabled={!input.trim() || sending}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              style={{
+                padding: "9px 18px", fontSize: 13, fontWeight: 600, borderRadius: 8, border: "none",
+                background: PRP, color: "#fff", cursor: sending ? "not-allowed" : "pointer",
+                opacity: (!input.trim() || sending) ? .5 : 1, transition: "opacity .15s",
+              }}
             >
               Enviar
             </button>

@@ -111,8 +111,9 @@ export function ConnectionGate() {
 
   if (checking) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#0a0c10" }}>
+        <div style={{ width: 24, height: 24, border: "2px solid #6c63ff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -123,8 +124,15 @@ export function ConnectionGate() {
 
   const selectedConversation = conversations.find((c) => c.id === selectedId) ?? null;
 
+  const TABS: { key: Tab; label: string }[] = [
+    { key: "conversations", label: "Conversaciones" },
+    { key: "contacts", label: "Contactos" },
+    { key: "webhook", label: "Webhook" },
+    { key: "dashboard", label: "Dashboard" },
+  ];
+
   return (
-    <div className="flex flex-col h-screen">
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#0a0c10", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
       {/* User bar */}
       {me && (
         <div style={{ background: "#12141e", borderBottom: "1px solid #2a2d3e", padding: "5px 20px", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 14, flexShrink: 0 }}>
@@ -141,6 +149,7 @@ export function ConnectionGate() {
           </button>
         </div>
       )}
+
       <DashboardHeader
         phone={phone}
         onDisconnect={handleDisconnect}
@@ -154,59 +163,33 @@ export function ConnectionGate() {
       />
 
       {/* Tab bar */}
-      <div className="flex border-b border-gray-200 bg-white shrink-0">
-        <button
-          onClick={() => setTab("conversations")}
-          className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            tab === "conversations"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Conversaciones
-        </button>
-        <button
-          onClick={() => setTab("contacts")}
-          className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            tab === "contacts"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Contactos
-        </button>
-        <button
-          onClick={() => setTab("webhook")}
-          className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            tab === "webhook"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Webhook
-        </button>
-        <button
-          onClick={() => setTab("dashboard")}
-          className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            tab === "dashboard"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Dashboard
-        </button>
+      <div style={{ display: "flex", borderBottom: "1px solid #2a2d3e", background: "#1a1d27", flexShrink: 0 }}>
+        {TABS.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            style={{
+              padding: "10px 20px", fontSize: 12, fontWeight: 600, border: "none",
+              borderBottom: tab === key ? "2px solid #6c63ff" : "2px solid transparent",
+              background: "transparent", color: tab === key ? "#6c63ff" : "#8892a4",
+              cursor: "pointer", transition: "color .15s",
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {tab === "dashboard" ? (
-        <div className="flex-1 overflow-hidden">
+        <div style={{ flex: 1, overflow: "hidden" }}>
           <DashboardView />
         </div>
       ) : tab === "webhook" ? (
-        <div className="flex-1 overflow-hidden">
+        <div style={{ flex: 1, overflow: "hidden" }}>
           <WebhookView />
         </div>
       ) : tab === "contacts" ? (
-        <div className="flex-1 overflow-hidden bg-white">
+        <div style={{ flex: 1, overflow: "hidden" }}>
           <ContactsView
             conversations={conversations}
             onNameUpdated={handleNameUpdated}
@@ -215,15 +198,15 @@ export function ConnectionGate() {
           />
         </div>
       ) : (
-        <div className="flex flex-1 overflow-hidden">
-          <aside className="w-72 border-r border-gray-200 bg-white overflow-y-auto shrink-0">
+        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+          <aside style={{ width: 280, borderRight: "1px solid #2a2d3e", overflowY: "auto", flexShrink: 0 }}>
             <ConversationList
               conversations={conversations}
               selectedId={selectedId}
               onSelect={handleSelect}
             />
           </aside>
-          <main className="flex-1 overflow-hidden">
+          <main style={{ flex: 1, overflow: "hidden" }}>
             {selectedConversation ? (
               <ConversationPanel
                 key={selectedConversation.id}
@@ -238,7 +221,7 @@ export function ConnectionGate() {
                 onDelete={handleDelete}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-sm text-gray-400">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 13, color: "#8892a4" }}>
                 Selecciona una conversación
               </div>
             )}

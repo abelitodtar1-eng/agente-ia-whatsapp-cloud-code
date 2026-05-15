@@ -1,6 +1,10 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 
+const BG = "#0a0c10"; const CARD = "#1a1d27"; const BORD = "#2a2d3e"; const PRP = "#6c63ff";
+const TEAL = "#00d4aa"; const RED = "#ff6b6b"; const TEXT = "#e2e8f0"; const MUTED = "#8892a4";
+const YELL = "#ffd166";
+
 export function SystemPromptEditor() {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -18,15 +22,7 @@ export function SystemPromptEditor() {
         setText(data.text);
         setSavedText(data.text);
         if (data.updatedAt) {
-          setLastSaved(
-            new Date(data.updatedAt * 1000).toLocaleString("es-ES", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          );
+          setLastSaved(new Date(data.updatedAt * 1000).toLocaleString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }));
         }
       });
   }, [open]);
@@ -41,123 +37,83 @@ export function SystemPromptEditor() {
   const hasChanges = text !== savedText;
 
   async function handleSave() {
-    setSaving(true);
-    setError(null);
+    setSaving(true); setError(null);
     try {
       const res = await fetch("/api/settings/system-prompt", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? "Error al guardar.");
-        return;
-      }
+      if (!res.ok) { const data = await res.json(); setError(data.error ?? "Error al guardar."); return; }
       setSavedText(text);
-      setLastSaved(
-        new Date().toLocaleString("es-ES", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      );
-    } catch {
-      setError("Error de conexión al guardar.");
-    } finally {
-      setSaving(false);
-    }
+      setLastSaved(new Date().toLocaleString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }));
+    } catch { setError("Error de conexión al guardar."); }
+    finally { setSaving(false); }
   }
 
   function handleReset() {
     if (!confirm("¿Descartar cambios y volver al texto guardado?")) return;
-    setText(savedText);
-    setError(null);
+    setText(savedText); setError(null);
   }
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        className="px-3 py-1.5 text-sm border border-emerald-600 text-emerald-700 rounded hover:bg-emerald-50 transition-colors"
+        style={{ padding: "5px 14px", fontSize: 11, fontWeight: 600, background: "transparent", border: `1px solid rgba(0,212,170,.4)`, color: TEAL, borderRadius: 8, cursor: "pointer" }}
       >
         Prompt IA
       </button>
 
       {open && (
-        <div
-          className="fixed inset-0 bg-black/30 z-40"
-          onClick={() => !hasChanges && setOpen(false)}
-        />
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 40 }} onClick={() => !hasChanges && setOpen(false)} />
       )}
 
       {open && (
-        <div className="fixed top-0 right-0 h-full w-full max-w-2xl bg-white shadow-2xl z-50 flex flex-col">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+        <div style={{ position: "fixed", top: 0, right: 0, height: "100%", width: "100%", maxWidth: 680, background: CARD, boxShadow: "-4px 0 40px rgba(0,0,0,.5)", zIndex: 50, display: "flex", flexDirection: "column", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: `1px solid ${BORD}` }}>
             <div>
-              <h2 className="text-base font-medium text-gray-900">System Prompt del bot</h2>
-              {lastSaved && (
-                <p className="text-xs text-gray-400 mt-0.5">Último guardado: {lastSaved}</p>
-              )}
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>System Prompt del bot</h2>
+              {lastSaved && <p style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>Último guardado: {lastSaved}</p>}
             </div>
-            <button
-              onClick={() => {
-                if (hasChanges && !confirm("Tienes cambios sin guardar. ¿Cerrar de todos modos?"))
-                  return;
-                setOpen(false);
-              }}
-              className="text-gray-400 hover:text-gray-600 text-xl leading-none"
-            >
-              ✕
-            </button>
+            <button onClick={() => { if (hasChanges && !confirm("Tienes cambios sin guardar. ¿Cerrar de todos modos?")) return; setOpen(false); }}
+              style={{ background: "transparent", border: "none", color: MUTED, fontSize: 20, cursor: "pointer", lineHeight: 1 }}>✕</button>
           </div>
 
-          <div className="mx-5 mt-4 px-3 py-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700 space-y-1">
-            <p><strong>Agente de triage:</strong> este prompt define cuándo el bot maneja el mensaje y cuándo escala a un humano.</p>
-            <p>Respuesta esperada del prompt: <code className="bg-blue-100 px-1 rounded">{"{"}"action":"handle"{"}"}</code> o <code className="bg-blue-100 px-1 rounded">{"{"}"action":"escalate"{"}"}</code></p>
-            <p>Los cambios se aplican al instante — no hace falta reiniciar.</p>
+          {/* Info box */}
+          <div style={{ margin: "16px 20px 0", padding: "12px 16px", background: "rgba(108,99,255,.08)", border: `1px solid rgba(108,99,255,.2)`, borderRadius: 8, fontSize: 11, color: MUTED, lineHeight: 1.7 }}>
+            <strong style={{ color: TEXT }}>Agente de triage:</strong> este prompt define cuándo el bot maneja el mensaje y cuándo escala a un humano.<br />
+            Respuesta esperada: <code style={{ background: "rgba(255,255,255,.06)", padding: "1px 6px", borderRadius: 4, fontFamily: "monospace" }}>{"{"}"action":"handle"{"}"}</code> o <code style={{ background: "rgba(255,255,255,.06)", padding: "1px 6px", borderRadius: 4, fontFamily: "monospace" }}>{"{"}"action":"escalate"{"}"}</code><br />
+            Los cambios se aplican al instante — no hace falta reiniciar.
           </div>
 
-          <div className="flex-1 overflow-y-auto px-5 py-4">
+          {/* Textarea */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
             <textarea
               ref={textareaRef}
               value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                setError(null);
-              }}
-              className="w-full min-h-[400px] text-sm font-mono text-gray-800 border border-gray-300 rounded p-3 resize-none focus:outline-none focus:border-blue-500 leading-relaxed"
+              onChange={(e) => { setText(e.target.value); setError(null); }}
+              style={{ width: "100%", minHeight: 400, fontSize: 13, fontFamily: "monospace", color: TEXT, background: BG, border: `1px solid ${BORD}`, borderRadius: 8, padding: "12px 14px", resize: "none", outline: "none", lineHeight: 1.6, boxSizing: "border-box" }}
               placeholder="Escribe aquí las instrucciones del bot..."
               spellCheck={false}
+              onFocus={(e) => { e.target.style.borderColor = PRP; }}
+              onBlur={(e) => { e.target.style.borderColor = BORD; }}
             />
-            <div className="flex justify-between mt-1">
-              <span
-                className={`text-xs ${text.length > 7500 ? "text-amber-600" : "text-gray-400"}`}
-              >
-                {text.length.toLocaleString()} / 8.000 caracteres
-              </span>
-              {hasChanges && (
-                <span className="text-xs text-amber-600 font-medium">Cambios sin guardar</span>
-              )}
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+              <span style={{ fontSize: 11, color: text.length > 7500 ? YELL : MUTED }}>{text.length.toLocaleString()} / 8.000 caracteres</span>
+              {hasChanges && <span style={{ fontSize: 11, color: YELL, fontWeight: 600 }}>Cambios sin guardar</span>}
             </div>
-            {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+            {error && <p style={{ marginTop: 8, fontSize: 12, color: RED }}>{error}</p>}
           </div>
 
-          <div className="px-5 py-4 border-t border-gray-200 flex items-center justify-between gap-3">
-            <button
-              onClick={handleReset}
-              disabled={!hasChanges || saving}
-              className="text-sm text-gray-500 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
+          {/* Footer */}
+          <div style={{ padding: "14px 20px", borderTop: `1px solid ${BORD}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <button onClick={handleReset} disabled={!hasChanges || saving}
+              style={{ fontSize: 13, background: "transparent", border: "none", color: MUTED, cursor: (!hasChanges || saving) ? "not-allowed" : "pointer", opacity: (!hasChanges || saving) ? .4 : 1 }}>
               Descartar cambios
             </button>
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges || saving || text.length > 8000}
-              className="px-5 py-2 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
+            <button onClick={handleSave} disabled={!hasChanges || saving || text.length > 8000}
+              style={{ padding: "9px 24px", fontSize: 13, fontWeight: 600, background: TEAL, color: "#0a0c10", border: "none", borderRadius: 8, cursor: (!hasChanges || saving || text.length > 8000) ? "not-allowed" : "pointer", opacity: (!hasChanges || saving || text.length > 8000) ? .5 : 1 }}>
               {saving ? "Guardando..." : "Guardar y aplicar"}
             </button>
           </div>

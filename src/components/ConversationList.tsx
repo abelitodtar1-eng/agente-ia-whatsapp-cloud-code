@@ -1,5 +1,8 @@
 "use client";
 
+const BG = "#0a0c10"; const CARD = "#1a1d27"; const BORD = "#2a2d3e"; const PRP = "#6c63ff";
+const TEAL = "#00d4aa"; const RED = "#ff6b6b"; const TEXT = "#e2e8f0"; const MUTED = "#8892a4";
+
 interface Conversation {
   id: number;
   phone: string;
@@ -26,52 +29,64 @@ function relativeTime(ts: number | null): string {
 
 export function ConversationList({ conversations, selectedId, onSelect }: ConversationListProps) {
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-4 py-3 border-b border-gray-200">
-        <h2 className="text-sm font-semibold text-gray-700">Conversaciones</h2>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: CARD }}>
+      <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORD}` }}>
+        <h2 style={{ fontSize: 11, fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: ".5px" }}>
+          Conversaciones
+        </h2>
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div style={{ flex: 1, overflowY: "auto" }}>
         {conversations.length === 0 && (
-          <p className="text-xs text-gray-400 text-center mt-8 px-4">
+          <p style={{ fontSize: 11, color: MUTED, textAlign: "center", marginTop: 32, padding: "0 16px" }}>
             Sin conversaciones aún. Esperando mensajes...
           </p>
         )}
-        {conversations.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => onSelect(c.id)}
-            className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-              selectedId === c.id ? "bg-blue-50 border-l-2 border-l-blue-600" : ""
-            }`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium text-gray-900 truncate">
-                {c.name ?? c.phone}
-                {c.unread_count > 0 && (
-                  <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold bg-blue-600 text-white rounded-full">
-                    {c.unread_count > 99 ? "99+" : c.unread_count}
-                  </span>
-                )}
-              </span>
-              <span
-                className={`shrink-0 flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                  c.mode === "AI"
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {c.mode === "HUMAN" && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                )}
-                {c.mode === "AI" ? "IA" : "Humano"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between mt-0.5">
-              <span className="text-xs text-gray-400">{c.phone}</span>
-              <span className="text-xs text-gray-400">{relativeTime(c.last_message_at)}</span>
-            </div>
-          </button>
-        ))}
+        {conversations.map((c) => {
+          const selected = selectedId === c.id;
+          return (
+            <button
+              key={c.id}
+              onClick={() => onSelect(c.id)}
+              style={{
+                width: "100%", textAlign: "left", padding: "12px 16px",
+                borderBottom: `1px solid ${BORD}`, cursor: "pointer", display: "block",
+                background: selected ? "rgba(108,99,255,.12)" : "transparent",
+                borderLeft: selected ? `2px solid ${PRP}` : "2px solid transparent",
+                transition: "background .15s",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                  {c.name ?? c.phone}
+                  {c.unread_count > 0 && (
+                    <span style={{
+                      marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      minWidth: 18, height: 18, padding: "0 4px", fontSize: 10, fontWeight: 700,
+                      background: PRP, color: "#fff", borderRadius: 20,
+                    }}>
+                      {c.unread_count > 99 ? "99+" : c.unread_count}
+                    </span>
+                  )}
+                </span>
+                <span style={{
+                  flexShrink: 0, display: "flex", alignItems: "center", gap: 4,
+                  fontSize: 10, padding: "2px 8px", borderRadius: 20, fontWeight: 600,
+                  background: c.mode === "AI" ? "rgba(0,212,170,.12)" : "rgba(255,107,107,.12)",
+                  color: c.mode === "AI" ? TEAL : RED,
+                }}>
+                  {c.mode === "HUMAN" && (
+                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: RED, display: "inline-block" }} />
+                  )}
+                  {c.mode === "AI" ? "IA" : "Humano"}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
+                <span style={{ fontSize: 11, color: MUTED }}>{c.phone}</span>
+                <span style={{ fontSize: 11, color: MUTED }}>{relativeTime(c.last_message_at)}</span>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

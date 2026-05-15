@@ -1,5 +1,7 @@
 "use client";
 
+const TEAL = "#00d4aa"; const YELL = "#ffd166";
+
 interface ModeToggleProps {
   conversationId: number;
   mode: "AI" | "HUMAN";
@@ -20,11 +22,12 @@ export function ModeToggle({ conversationId, mode, onChange }: ModeToggleProps) 
   return (
     <button
       onClick={toggle}
-      className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-        mode === "AI"
-          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-          : "bg-amber-100 text-amber-700 hover:bg-amber-200"
-      }`}
+      style={{
+        padding: "4px 12px", fontSize: 11, fontWeight: 600, borderRadius: 20, border: "none", cursor: "pointer",
+        background: mode === "AI" ? "rgba(0,212,170,.15)" : "rgba(255,209,102,.15)",
+        color: mode === "AI" ? TEAL : YELL,
+        transition: "all .15s",
+      }}
     >
       {mode === "AI" ? "IA" : "HUMAN"}
     </button>

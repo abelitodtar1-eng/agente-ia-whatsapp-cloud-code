@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 
+const BG = "#0a0c10"; const CARD = "#1a1d27"; const BORD = "#2a2d3e"; const PRP = "#6c63ff";
+const TEAL = "#00d4aa"; const RED = "#ff6b6b"; const TEXT = "#e2e8f0"; const MUTED = "#8892a4";
+
 interface ConnectionState {
   status: "disconnected" | "qr" | "connecting" | "connected";
   qr_string: string | null;
@@ -12,11 +15,7 @@ interface QRScreenProps {
 }
 
 export function QRScreen({ onConnected }: QRScreenProps) {
-  const [state, setState] = useState<ConnectionState>({
-    status: "disconnected",
-    qr_string: null,
-    phone: null,
-  });
+  const [state, setState] = useState<ConnectionState>({ status: "disconnected", qr_string: null, phone: null });
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -26,60 +25,48 @@ export function QRScreen({ onConnected }: QRScreenProps) {
         const data: ConnectionState = await res.json();
         setState(data);
         setElapsed((e) => e + 2);
-        if (data.status === "connected" && data.phone) {
-          onConnected(data.phone);
-        }
+        if (data.status === "connected" && data.phone) onConnected(data.phone);
       } catch {}
     }, 2000);
     return () => clearInterval(interval);
   }, [onConnected]);
 
-  const dotColor =
-    state.status === "qr"
-      ? "bg-amber-400 animate-pulse"
-      : state.status === "connecting"
-      ? "bg-blue-500 animate-pulse"
-      : "bg-gray-400";
+  const dotColor = state.status === "qr" ? TEAL : state.status === "connecting" ? PRP : MUTED;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
-        <h1 className="text-xl font-semibold text-gray-900 mb-1">Conectar WhatsApp</h1>
-        <p className="text-sm text-gray-500 mb-6">
-          Clínica Dental Sonríe Bien · IA Founders
-        </p>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: BG, padding: "0 20px", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+      <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 16, padding: "36px 32px", maxWidth: 380, width: "100%", textAlign: "center" }}>
+        <h1 style={{ fontSize: 18, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Conectar WhatsApp</h1>
+        <p style={{ fontSize: 12, color: MUTED, marginBottom: 24 }}>CRM DTAR · Sistema Interno</p>
 
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <div className={`w-2 h-2 rounded-full ${dotColor}`} />
-          <span className="text-xs text-gray-500 capitalize">{state.status}</span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 24 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: dotColor }} />
+          <span style={{ fontSize: 12, color: MUTED, textTransform: "capitalize" }}>{state.status}</span>
         </div>
 
         {state.qr_string ? (
-          <div className="flex justify-center">
-            <img
-              src={state.qr_string}
-              alt="QR WhatsApp"
-              className="w-64 h-64 rounded-lg border border-gray-100"
-            />
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <img src={state.qr_string} alt="QR WhatsApp" style={{ width: 240, height: 240, borderRadius: 12, border: `1px solid ${BORD}` }} />
           </div>
         ) : elapsed > 10 && state.status !== "connecting" ? (
-          <div className="py-8 text-sm text-red-500">
+          <div style={{ padding: "32px 0", fontSize: 12, color: RED }}>
             No se recibe el QR. Comprueba que el bot está corriendo con{" "}
-            <code className="font-mono bg-red-50 px-1 rounded">npm run start:bot</code>
+            <code style={{ fontFamily: "monospace", background: "rgba(255,107,107,.1)", padding: "1px 6px", borderRadius: 4 }}>npm run start:bot</code>
           </div>
         ) : (
-          <div className="py-8">
-            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs text-gray-400 mt-3">Esperando QR...</p>
+          <div style={{ padding: "32px 0" }}>
+            <div style={{ width: 28, height: 28, border: `2px solid ${PRP}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto" }} />
+            <p style={{ fontSize: 11, color: MUTED, marginTop: 12 }}>Esperando QR...</p>
           </div>
         )}
 
         {state.qr_string && (
-          <p className="text-xs text-gray-400 mt-4">
+          <p style={{ fontSize: 11, color: MUTED, marginTop: 20, lineHeight: 1.6 }}>
             Abre WhatsApp en tu móvil → Dispositivos vinculados → Vincular un dispositivo
           </p>
         )}
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

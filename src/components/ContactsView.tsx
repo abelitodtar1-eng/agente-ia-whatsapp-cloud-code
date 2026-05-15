@@ -1,6 +1,10 @@
 "use client";
 import { useState } from "react";
 
+const BG = "#0a0c10"; const CARD = "#1a1d27"; const BORD = "#2a2d3e"; const PRP = "#6c63ff";
+const TEAL = "#00d4aa"; const RED = "#ff6b6b"; const TEXT = "#e2e8f0"; const MUTED = "#8892a4";
+const YELL = "#ffd166";
+
 interface Conversation {
   id: number;
   phone: string;
@@ -26,13 +30,7 @@ function relativeTime(ts: number | null): string {
   return `hace ${Math.floor(diff / 86400)} d`;
 }
 
-interface EditModalProps {
-  contact: Conversation;
-  onSave: (name: string, phoneAlias: string) => Promise<void>;
-  onClose: () => void;
-}
-
-function EditModal({ contact, onSave, onClose }: EditModalProps) {
+function EditModal({ contact, onSave, onClose }: { contact: Conversation; onSave: (name: string, alias: string) => Promise<void>; onClose: () => void }) {
   const [name, setName] = useState(contact.name ?? "");
   const [phoneAlias, setPhoneAlias] = useState(contact.phone_alias ?? "");
   const [saving, setSaving] = useState(false);
@@ -44,61 +42,36 @@ function EditModal({ contact, onSave, onClose }: EditModalProps) {
     onClose();
   }
 
+  const inputStyle = { width: "100%", background: BG, border: `1px solid ${BORD}`, borderRadius: 8, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div
-        className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6 space-y-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-800">Editar contacto</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={onClose}>
+      <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 16, padding: "24px 28px", width: "100%", maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Editar contacto</h3>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: MUTED, fontSize: 20, cursor: "pointer" }}>×</button>
         </div>
 
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Nombre</label>
-            <input
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSave()}
-              placeholder="Nombre del contacto"
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Teléfono</label>
-            <input
-              value={phoneAlias}
-              onChange={(e) => setPhoneAlias(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSave()}
-              placeholder="+53..."
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">ID interno (WhatsApp)</label>
-            <input
-              value={contact.phone}
-              disabled
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-400 font-mono"
-            />
-          </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ display: "block", fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 5 }}>Nombre</label>
+          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSave()} placeholder="Nombre del contacto" style={inputStyle}
+            onFocus={(e) => { e.target.style.borderColor = PRP; }} onBlur={(e) => { e.target.style.borderColor = BORD; }} />
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ display: "block", fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 5 }}>Teléfono</label>
+          <input value={phoneAlias} onChange={(e) => setPhoneAlias(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSave()} placeholder="+53..." style={inputStyle}
+            onFocus={(e) => { e.target.style.borderColor = PRP; }} onBlur={(e) => { e.target.style.borderColor = BORD; }} />
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: "block", fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 5 }}>ID interno (WhatsApp)</label>
+          <input value={contact.phone} disabled style={{ ...inputStyle, opacity: .5, cursor: "not-allowed", fontFamily: "monospace" }} />
         </div>
 
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={handleSave} disabled={saving} style={{ flex: 1, padding: "9px", fontSize: 13, fontWeight: 600, background: PRP, color: "#fff", border: "none", borderRadius: 8, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? .6 : 1 }}>
             {saving ? "Guardando..." : "Guardar"}
           </button>
-          <button
-            onClick={onClose}
-            className="flex-1 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
+          <button onClick={onClose} style={{ flex: 1, padding: "9px", fontSize: 13, fontWeight: 600, background: "transparent", color: MUTED, border: `1px solid ${BORD}`, borderRadius: 8, cursor: "pointer" }}>
             Cancelar
           </button>
         </div>
@@ -115,8 +88,7 @@ export function ContactsView({ conversations, onNameUpdated, onPhoneAliasUpdated
   async function handleSaveEdit(name: string, phoneAlias: string) {
     if (!editing) return;
     await fetch(`/api/conversations/${editing.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, phone_alias: phoneAlias }),
     });
     onNameUpdated(editing.id, name);
@@ -126,99 +98,61 @@ export function ContactsView({ conversations, onNameUpdated, onPhoneAliasUpdated
   async function handleDelete(id: number) {
     setDeleting(id);
     await fetch(`/api/conversations/${id}`, { method: "DELETE" });
-    setDeleting(null);
-    setConfirmDelete(null);
+    setDeleting(null); setConfirmDelete(null);
     onDeleted(id);
   }
 
+  const thStyle = { padding: "10px 16px", textAlign: "left" as const, fontSize: 10, color: MUTED, textTransform: "uppercase" as const, letterSpacing: ".5px", fontWeight: 600 };
+  const tdStyle = { padding: "12px 16px", borderBottom: `1px solid ${BORD}` };
+
   return (
     <>
-      {editing && (
-        <EditModal
-          contact={editing}
-          onSave={handleSaveEdit}
-          onClose={() => setEditing(null)}
-        />
-      )}
+      {editing && <EditModal contact={editing} onSave={handleSaveEdit} onClose={() => setEditing(null)} />}
 
-      <div className="flex flex-col h-full overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-200 bg-white">
-          <h2 className="text-sm font-semibold text-gray-700">Contactos · {conversations.length}</h2>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: BG, fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+        <div style={{ padding: "14px 20px", borderBottom: `1px solid ${BORD}`, background: CARD }}>
+          <h2 style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Contactos · <span style={{ color: MUTED }}>{conversations.length}</span></h2>
         </div>
-        <div className="flex-1 overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead style={{ position: "sticky", top: 0, background: CARD, borderBottom: `1px solid ${BORD}` }}>
               <tr>
-                <th className="text-left px-5 py-2 text-xs font-medium text-gray-500 w-44">Nombre</th>
-                <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 w-36">Teléfono</th>
-                <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">ID interno</th>
-                <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 w-20">Modo</th>
-                <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 w-24">Último msg</th>
-                <th className="px-4 py-2 w-28"></th>
+                {["Nombre", "Teléfono", "ID interno", "Modo", "Último msg", ""].map((h) => (
+                  <th key={h} style={thStyle}>{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {conversations.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-center py-12 text-xs text-gray-400">Sin contactos aún</td>
-                </tr>
+                <tr><td colSpan={6} style={{ padding: "48px", textAlign: "center", fontSize: 12, color: MUTED }}>Sin contactos aún</td></tr>
               )}
               {conversations.map((c) => (
-                <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors group">
-                  <td className="px-5 py-2.5">
-                    <span className={`text-sm ${c.name ? "font-medium text-gray-900" : "text-gray-400 italic"}`}>
+                <tr key={c.id} style={{ borderBottom: `1px solid ${BORD}` }}>
+                  <td style={tdStyle}>
+                    <span style={{ fontWeight: c.name ? 600 : 400, color: c.name ? TEXT : MUTED, fontStyle: c.name ? "normal" : "italic" }}>
                       {c.name ?? "Sin nombre"}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-sm text-gray-700">
-                    {c.phone_alias ?? <span className="text-gray-400 italic text-xs">—</span>}
-                  </td>
-                  <td className="px-4 py-2.5 text-xs font-mono text-gray-400">{c.phone}</td>
-                  <td className="px-4 py-2.5">
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                      c.mode === "AI" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                    }`}>
+                  <td style={{ ...tdStyle, color: TEXT }}>{c.phone_alias ?? <span style={{ color: MUTED }}>—</span>}</td>
+                  <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: 11, color: MUTED }}>{c.phone}</td>
+                  <td style={tdStyle}>
+                    <span style={{ fontSize: 10, padding: "2px 10px", borderRadius: 20, fontWeight: 700, background: c.mode === "AI" ? "rgba(0,212,170,.12)" : "rgba(255,209,102,.12)", color: c.mode === "AI" ? TEAL : YELL }}>
                       {c.mode === "AI" ? "IA" : "Humano"}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-gray-400">{relativeTime(c.last_message_at)}</td>
-                  <td className="px-4 py-2.5">
+                  <td style={{ ...tdStyle, fontSize: 11, color: MUTED }}>{relativeTime(c.last_message_at)}</td>
+                  <td style={tdStyle}>
                     {confirmDelete === c.id ? (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleDelete(c.id)}
-                          disabled={deleting === c.id}
-                          className="px-2 py-1 text-xs font-medium text-white bg-red-500 rounded hover:bg-red-600 disabled:opacity-50 transition-colors"
-                        >
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => handleDelete(c.id)} disabled={deleting === c.id} style={{ padding: "4px 12px", fontSize: 11, fontWeight: 600, background: RED, color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", opacity: deleting === c.id ? .5 : 1 }}>
                           {deleting === c.id ? "..." : "Sí"}
                         </button>
-                        <button
-                          onClick={() => setConfirmDelete(null)}
-                          className="px-2 py-1 text-xs font-medium text-gray-600 border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                        >
-                          No
-                        </button>
+                        <button onClick={() => setConfirmDelete(null)} style={{ padding: "4px 12px", fontSize: 11, background: "transparent", color: MUTED, border: `1px solid ${BORD}`, borderRadius: 6, cursor: "pointer" }}>No</button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => setEditing(c)}
-                          title="Editar"
-                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => setConfirmDelete(c.id)}
-                          title="Eliminar"
-                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => setEditing(c)} title="Editar" style={{ padding: "4px 12px", fontSize: 11, background: "transparent", color: MUTED, border: `1px solid ${BORD}`, borderRadius: 6, cursor: "pointer" }}>Editar</button>
+                        <button onClick={() => setConfirmDelete(c.id)} title="Eliminar" style={{ padding: "4px 12px", fontSize: 11, background: "transparent", color: RED, border: "1px solid rgba(255,107,107,.2)", borderRadius: 6, cursor: "pointer" }}>Eliminar</button>
                       </div>
                     )}
                   </td>
