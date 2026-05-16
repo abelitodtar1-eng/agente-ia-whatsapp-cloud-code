@@ -488,6 +488,7 @@ export interface Product {
   stock: number;
   precio: number;
   activo: number;
+  imagen: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -528,3 +529,6 @@ export function upsertProductByName(p: Omit<Product, "id" | "activo" | "created_
       updated_at = unixepoch()
   `).run(p.nombre, p.categoria, p.udm, p.stock, p.precio);
 }
+
+// Migration: imagen column
+try { db.prepare("ALTER TABLE products ADD COLUMN imagen TEXT").run(); } catch {}

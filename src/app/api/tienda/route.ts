@@ -11,6 +11,7 @@ export async function GET() {
       stock:     p.stock,
       precio:    p.precio,
       estado:    p.stock > 0 ? "OK" : "SIN STOCK",
+      imagen:    p.imagen ?? null,
     }));
     const conn  = getConnectionState();
     const phone = conn.phone ?? "";

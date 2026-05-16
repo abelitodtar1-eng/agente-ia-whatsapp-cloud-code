@@ -13,13 +13,14 @@ const MUTED = "#8892a4";
 const GREEN = "#4caf50";
 
 interface Producto {
-  codigo: number;
+  id: number;
   nombre: string;
   categoria: string;
   udm: string;
   stock: number;
   precio: number;
   estado: string;
+  imagen: string | null;
 }
 
 function stockBadge(p: Producto) {
@@ -124,14 +125,23 @@ export default function TiendaPublica() {
           const disponible = p.stock > 0 && !p.estado.includes("SIN STOCK");
           return (
             <div
-              key={p.codigo}
+              key={p.id}
               style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 14, padding: 18, display: "flex", flexDirection: "column", gap: 10, opacity: disponible ? 1 : 0.55 }}
             >
               {/* Category chip */}
               {p.categoria && (
-                <span style={{ fontSize: 10, color: PRP, background: "rgba(108,99,255,.12)", padding: "2px 8px", borderRadius: 20, alignSelf: "flex-start", fontWeight: 600, letterSpacing: ".3px" }}>
+                {p.imagen && (
+                <img src={'/api/product-images/' + p.imagen} alt={p.nombre}
+                  style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+              )}
+              {!p.imagen && (
+                <div style={{ width: '100%', height: 80, background: '#12141e', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>📦</div>
+              )}
+              {p.categoria && (
+              <span style={{ fontSize: 10, color: PRP, background: "rgba(108,99,255,.12)", padding: "2px 8px", borderRadius: 20, alignSelf: "flex-start", fontWeight: 600, letterSpacing: ".3px" }}>
                   {p.categoria}
                 </span>
+              )}
               )}
 
               {/* Name */}

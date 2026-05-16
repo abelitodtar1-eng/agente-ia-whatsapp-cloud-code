@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 
 const BG    = "#0a0c10";
 const CARD  = "#1a1d27";
@@ -20,11 +20,13 @@ interface Product {
   stock: number;
   precio: number;
   activo: number;
+  imagen: string | null;
 }
 
-const EMPTY: Omit<Product, "id"> = { nombre: "", categoria: "", udm: "", stock: 0, precio: 0, activo: 1 };
+type FormData = Omit<Product, "id">;
+const EMPTY: FormData = { nombre: "", categoria: "", udm: "", stock: 0, precio: 0, activo: 1, imagen: null };
 
-function Input({ label, value, onChange, type = "text", placeholder = "" }: {
+function LabelInput({ label, value, onChange, type = "text", placeholder = "" }: {
   label: string; value: string | number; onChange: (v: string) => void;
   type?: string; placeholder?: string;
 }) {
@@ -32,41 +34,135 @@ function Input({ label, value, onChange, type = "text", placeholder = "" }: {
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <label style={{ fontSize: 11, color: MUTED, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px" }}>{label}</label>
       <input
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
+        type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
         style={{ background: "#0f111a", border: `1px solid ${BORD}`, borderRadius: 8, padding: "8px 12px", color: TEXT, fontSize: 13, outline: "none" }}
       />
     </div>
   );
 }
 
-function Modal({ title, form, setForm, onSave, onClose, saving }: {
+function ImageUpload({ productId, current, onUploaded, onRemoved }: {
+  productId: number | null;
+  current: string | null;
+  onUploaded: (filename: string) => void;
+  onRemoved: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(current ? `/api/product-images/${current}` : null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError("");
+
+    // Local preview immediately
+    setPreview(URL.createObjectURL(file));
+
+    if (!productId) {
+      // New product — will upload after save via pendingFile stored in parent
+      onUploaded(`__pending__:${file.name}`);
+      // Store file reference for parent to use
+      (window as unknown as Record<string, File>)["__pendingImageFile"] = file;
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const r = await fetch(`/api/admin/products/${productId}/image`, { method: "POST", body: form });
+      const d = await r.json();
+      if (!r.ok) { setError(d.error ?? "Error al subir"); return; }
+      onUploaded(d.filename);
+    } finally { setUploading(false); }
+  }
+
+  async function handleRemove() {
+    setPreview(null);
+    if (fileRef.current) fileRef.current.value = "";
+    if (productId) {
+      await fetch(`/api/admin/products/${productId}/image`, { method: "DELETE" });
+    }
+    onRemoved();
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <label style={{ fontSize: 11, color: MUTED, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px" }}>Foto del producto</label>
+      <div
+        onClick={() => !uploading && fileRef.current?.click()}
+        style={{
+          border: `2px dashed ${preview ? TEAL : BORD}`, borderRadius: 10, padding: "12px 16px",
+          display: "flex", alignItems: "center", gap: 14, cursor: uploading ? "default" : "pointer",
+          background: preview ? "rgba(0,212,170,.04)" : "transparent", transition: "border-color .2s",
+        }}
+      >
+        {preview ? (
+          <img src={preview} alt="" style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: 72, height: 72, background: "#12141e", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>📷</div>
+        )}
+        <div>
+          <div style={{ fontSize: 13, color: uploading ? MUTED : TEXT, fontWeight: 600 }}>
+            {uploading ? "Subiendo…" : preview ? "Cambiar foto" : "Subir foto"}
+          </div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>JPG, PNG, WEBP — máx. 5MB</div>
+          {error && <div style={{ fontSize: 11, color: RED, marginTop: 3 }}>{error}</div>}
+        </div>
+        {preview && !uploading && (
+          <button
+            onClick={e => { e.stopPropagation(); handleRemove(); }}
+            style={{ marginLeft: "auto", background: "rgba(255,107,107,.12)", color: RED, border: `1px solid rgba(255,107,107,.2)`, borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer" }}
+          >
+            Quitar
+          </button>
+        )}
+      </div>
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{ display: "none" }} onChange={handleFile} />
+    </div>
+  );
+}
+
+function Modal({ title, form, setForm, productId, onSave, onClose, saving }: {
   title: string;
-  form: Omit<Product, "id">;
-  setForm: (f: Omit<Product, "id">) => void;
+  form: FormData;
+  setForm: (f: FormData) => void;
+  productId: number | null;
   onSave: () => void;
   onClose: () => void;
   saving: boolean;
 }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 16, padding: 28, width: 420, display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
+      <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 16, padding: 28, width: 460, maxHeight: "90vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>{title}</div>
-        <Input label="Nombre *" value={form.nombre} onChange={v => setForm({ ...form, nombre: v })} placeholder="Ej: Arroz Premium 1kg" />
+
+        <LabelInput label="Nombre *" value={form.nombre} onChange={v => setForm({ ...form, nombre: v })} placeholder="Ej: Arroz Premium 1kg" />
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Input label="Categoría" value={form.categoria} onChange={v => setForm({ ...form, categoria: v })} placeholder="Alimentos" />
-          <Input label="Unidad (UdM)" value={form.udm} onChange={v => setForm({ ...form, udm: v })} placeholder="kg, pqt, bot…" />
+          <LabelInput label="Categoría" value={form.categoria} onChange={v => setForm({ ...form, categoria: v })} placeholder="Alimentos" />
+          <LabelInput label="Unidad (UdM)" value={form.udm} onChange={v => setForm({ ...form, udm: v })} placeholder="kg, pqt, bot…" />
         </div>
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Input label="Precio (CUP)" value={form.precio} type="number" onChange={v => setForm({ ...form, precio: Number(v) })} />
-          <Input label="Stock" value={form.stock} type="number" onChange={v => setForm({ ...form, stock: Number(v) })} />
+          <LabelInput label="Precio (CUP)" value={form.precio} type="number" onChange={v => setForm({ ...form, precio: Number(v) })} />
+          <LabelInput label="Stock" value={form.stock} type="number" onChange={v => setForm({ ...form, stock: Number(v) })} />
         </div>
+
+        <ImageUpload
+          productId={productId}
+          current={form.imagen}
+          onUploaded={filename => setForm({ ...form, imagen: filename })}
+          onRemoved={() => setForm({ ...form, imagen: null })}
+        />
+
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: TEXT, cursor: "pointer", userSelect: "none" }}>
           <input type="checkbox" checked={form.activo === 1} onChange={e => setForm({ ...form, activo: e.target.checked ? 1 : 0 })} />
           Visible en tienda pública
         </label>
+
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
           <button onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: `1px solid ${BORD}`, background: "transparent", color: MUTED, fontSize: 13, cursor: "pointer" }}>
             Cancelar
@@ -74,7 +170,7 @@ function Modal({ title, form, setForm, onSave, onClose, saving }: {
           <button
             onClick={onSave}
             disabled={saving || !form.nombre.trim()}
-            style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: PRP, color: "#fff", fontSize: 13, fontWeight: 600, cursor: saving ? "default" : "pointer", opacity: saving ? .6 : 1 }}
+            style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: PRP, color: "#fff", fontSize: 13, fontWeight: 600, cursor: saving ? "default" : "pointer", opacity: saving || !form.nombre.trim() ? .6 : 1 }}
           >
             {saving ? "Guardando…" : "Guardar"}
           </button>
@@ -85,15 +181,15 @@ function Modal({ title, form, setForm, onSave, onClose, saving }: {
 }
 
 export function TiendaView() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [search, setSearch]     = useState("");
-  const [loading, setLoading]   = useState(true);
-  const [syncing, setSyncing]   = useState(false);
-  const [syncMsg, setSyncMsg]   = useState("");
-  const [copied, setCopied]     = useState(false);
-  const [modal, setModal]       = useState<{ mode: "add" | "edit"; data: Omit<Product, "id">; id?: number } | null>(null);
-  const [saving, setSaving]     = useState(false);
-  const [deleting, setDeleting] = useState<number | null>(null);
+  const [products, setProducts]   = useState<Product[]>([]);
+  const [search, setSearch]       = useState("");
+  const [loading, setLoading]     = useState(true);
+  const [syncing, setSyncing]     = useState(false);
+  const [syncMsg, setSyncMsg]     = useState("");
+  const [copied, setCopied]       = useState(false);
+  const [modal, setModal]         = useState<{ mode: "add" | "edit"; data: FormData; id?: number } | null>(null);
+  const [saving, setSaving]       = useState(false);
+  const [deleting, setDeleting]   = useState<number | null>(null);
 
   const storeUrl = typeof window !== "undefined" ? `${window.location.origin}/tienda` : "/tienda";
 
@@ -109,8 +205,9 @@ export function TiendaView() {
     products.filter(p => !search || p.nombre.toLowerCase().includes(search.toLowerCase()))
   , [products, search]);
 
-  const enStock  = products.filter(p => p.activo && p.stock > 0).length;
+  const enStock   = products.filter(p => p.activo && p.stock > 0).length;
   const inactivos = products.filter(p => !p.activo).length;
+  const sinStock  = products.filter(p => p.stock <= 0).length;
 
   function copyLink() {
     navigator.clipboard.writeText(storeUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
@@ -133,11 +230,29 @@ export function TiendaView() {
     if (!modal) return;
     setSaving(true);
     try {
+      let productId = modal.id ?? null;
+
       if (modal.mode === "add") {
-        await fetch("/api/admin/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(modal.data) });
+        const body = { ...modal.data, imagen: modal.data.imagen?.startsWith("__pending__:") ? null : modal.data.imagen };
+        const r = await fetch("/api/admin/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const created = await r.json();
+        productId = created.id;
       } else {
-        await fetch(`/api/admin/products/${modal.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(modal.data) });
+        const body = { ...modal.data, imagen: modal.data.imagen?.startsWith("__pending__:") ? null : modal.data.imagen };
+        await fetch(`/api/admin/products/${modal.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       }
+
+      // Upload pending image after product is saved
+      if (productId && modal.data.imagen?.startsWith("__pending__:")) {
+        const pendingFile = (window as unknown as Record<string, File>)["__pendingImageFile"];
+        if (pendingFile) {
+          const form = new FormData();
+          form.append("file", pendingFile);
+          await fetch(`/api/admin/products/${productId}/image`, { method: "POST", body: form });
+          delete (window as unknown as Record<string, File>)["__pendingImageFile"];
+        }
+      }
+
       setModal(null);
       load();
     } finally { setSaving(false); }
@@ -164,6 +279,7 @@ export function TiendaView() {
           title={modal.mode === "add" ? "Nuevo producto" : "Editar producto"}
           form={modal.data}
           setForm={d => setModal({ ...modal, data: d })}
+          productId={modal.id ?? null}
           onSave={handleSave}
           onClose={() => setModal(null)}
           saving={saving}
@@ -196,8 +312,8 @@ export function TiendaView() {
         {[
           { label: "Total", value: products.length, color: PRP },
           { label: "En tienda", value: enStock, color: TEAL },
-          { label: "Ocultos", value: inactivos, color: inactivos > 0 ? MUTED : MUTED },
-          { label: "Sin stock", value: products.filter(p => p.stock <= 0).length, color: RED },
+          { label: "Ocultos", value: inactivos, color: MUTED },
+          { label: "Sin stock", value: sinStock, color: sinStock > 0 ? RED : MUTED },
         ].map(k => (
           <div key={k.label} style={{ background: CARD, border: `1px solid ${BORD}`, borderTop: `3px solid ${k.color}`, borderRadius: 10, padding: "12px 18px", flex: 1 }}>
             <div style={{ fontSize: 22, fontWeight: 700, color: k.color }}>{loading ? "—" : k.value}</div>
@@ -222,17 +338,17 @@ export function TiendaView() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "#12141e" }}>
-                {["Visible", "Producto", "Categoría", "UdM", "Precio (CUP)", "Stock", "Acciones"].map(h => (
+                {["Visible", "Foto", "Producto", "Categoría", "UdM", "Precio (CUP)", "Stock", "Acciones"].map(h => (
                   <th key={h} style={{ padding: "10px 14px", fontSize: 10, fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: ".5px", textAlign: "left", borderBottom: `1px solid ${BORD}` }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: MUTED, fontSize: 12 }}>Cargando…</td></tr>
+                <tr><td colSpan={8} style={{ padding: 40, textAlign: "center", color: MUTED, fontSize: 12 }}>Cargando…</td></tr>
               )}
               {!loading && visible.length === 0 && (
-                <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: MUTED, fontSize: 12 }}>Sin productos — usa "+ Nuevo" o "↓ Sincronizar Sheets"</td></tr>
+                <tr><td colSpan={8} style={{ padding: 40, textAlign: "center", color: MUTED, fontSize: 12 }}>Sin productos — usa "+ Nuevo" o "↓ Sincronizar Sheets"</td></tr>
               )}
               {visible.map(p => (
                 <tr
@@ -244,11 +360,18 @@ export function TiendaView() {
                   <td style={{ padding: "10px 14px" }}>
                     <button
                       onClick={() => toggleActivo(p)}
-                      title={p.activo ? "Ocultar de tienda" : "Mostrar en tienda"}
+                      title={p.activo ? "Ocultar" : "Mostrar en tienda"}
                       style={{ width: 28, height: 16, borderRadius: 8, border: "none", background: p.activo ? TEAL : BORD, cursor: "pointer", position: "relative", transition: "background .2s" }}
                     >
                       <span style={{ position: "absolute", top: 2, left: p.activo ? 14 : 2, width: 12, height: 12, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
                     </button>
+                  </td>
+                  <td style={{ padding: "8px 14px" }}>
+                    {p.imagen ? (
+                      <img src={`/api/product-images/${p.imagen}`} alt="" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 8, border: `1px solid ${BORD}`, display: "block" }} />
+                    ) : (
+                      <div style={{ width: 44, height: 44, background: "#12141e", borderRadius: 8, border: `1px solid ${BORD}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>📦</div>
+                    )}
                   </td>
                   <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 600, color: TEXT }}>{p.nombre}</td>
                   <td style={{ padding: "10px 14px", fontSize: 11, color: MUTED }}>{p.categoria || "—"}</td>
@@ -262,7 +385,7 @@ export function TiendaView() {
                   <td style={{ padding: "10px 14px" }}>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button
-                        onClick={() => setModal({ mode: "edit", id: p.id, data: { nombre: p.nombre, categoria: p.categoria, udm: p.udm, stock: p.stock, precio: p.precio, activo: p.activo } })}
+                        onClick={() => setModal({ mode: "edit", id: p.id, data: { nombre: p.nombre, categoria: p.categoria, udm: p.udm, stock: p.stock, precio: p.precio, activo: p.activo, imagen: p.imagen } })}
                         style={{ fontSize: 12, background: "rgba(108,99,255,.12)", color: PRP, border: `1px solid rgba(108,99,255,.2)`, borderRadius: 6, padding: "3px 10px", cursor: "pointer" }}
                       >
                         Editar
