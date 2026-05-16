@@ -464,3 +464,67 @@ export function updatePaymentStatus(transactionUuid: string, status: Payment["st
 }
 
 export default db;
+
+// ─── Store products ───────────────────────────────────────────────────────────
+db.prepare(`CREATE TABLE IF NOT EXISTS products (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre     TEXT NOT NULL,
+  categoria  TEXT NOT NULL DEFAULT '',
+  udm        TEXT NOT NULL DEFAULT '',
+  stock      REAL NOT NULL DEFAULT 0,
+  precio     REAL NOT NULL DEFAULT 0,
+  activo     INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+)`).run();
+
+try { db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_products_nombre ON products(nombre)").run(); } catch {}
+
+export interface Product {
+  id: number;
+  nombre: string;
+  categoria: string;
+  udm: string;
+  stock: number;
+  precio: number;
+  activo: number;
+  created_at: number;
+  updated_at: number;
+}
+
+export function listProducts(): Product[] {
+  return db.prepare("SELECT * FROM products ORDER BY categoria, nombre").all() as Product[];
+}
+
+export function listActiveProducts(): Product[] {
+  return db.prepare("SELECT * FROM products WHERE activo = 1 AND stock > 0 ORDER BY categoria, nombre").all() as Product[];
+}
+
+export function createProduct(p: Omit<Product, "id" | "created_at" | "updated_at">): Product {
+  return db.prepare(
+    "INSERT INTO products (nombre, categoria, udm, stock, precio, activo) VALUES (?,?,?,?,?,?) RETURNING *"
+  ).get(p.nombre, p.categoria, p.udm, p.stock, p.precio, p.activo) as Product;
+}
+
+export function updateProduct(id: number, p: Partial<Omit<Product, "id" | "created_at" | "updated_at">>): void {
+  const setClauses = Object.keys(p).map(k => `${k} = ?`).join(", ");
+  const vals = [...Object.values(p), id];
+  db.prepare(`UPDATE products SET ${setClauses}, updated_at = unixepoch() WHERE id = ?`).run(...vals);
+}
+
+export function deleteProduct(id: number): void {
+  db.prepare("DELETE FROM products WHERE id = ?").run(id);
+}
+
+export function upsertProductByName(p: Omit<Product, "id" | "activo" | "created_at" | "updated_at">): void {
+  db.prepare(`
+    INSERT INTO products (nombre, categoria, udm, stock, precio)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(nombre) DO UPDATE SET
+      categoria  = excluded.categoria,
+      udm        = excluded.udm,
+      stock      = excluded.stock,
+      precio     = excluded.precio,
+      updated_at = unixepoch()
+  `).run(p.nombre, p.categoria, p.udm, p.stock, p.precio);
+}
