@@ -26,7 +26,6 @@ interface BotHandle {
 let handle: BotHandle | null = null;
 let isStarting = false;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-let qrSock: WASocket | null = null;
 
 function clearReconnectTimer() {
   if (reconnectTimer) {
@@ -73,6 +72,24 @@ async function startOutboxPoller(sock: WASocket) {
   }, 2000);
 }
 
+async function sendQrToTelegram(qrString: string): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+  try {
+    const pngBuffer = await qrcode.toBuffer(qrString);
+    const form = new FormData();
+    form.append("chat_id", chatId);
+    form.append("caption", "🤖 WhatsApp QR — escanea para conectar el bot");
+    form.append("photo", new Blob([pngBuffer], { type: "image/png" }), "qr.png");
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: "POST", body: form });
+    if (res.ok) console.log("[bot] QR enviado a Telegram");
+    else console.error("[bot] Error enviando QR a Telegram:", await res.text());
+  } catch (err) {
+    console.error("[bot] sendQrToTelegram error:", err);
+  }
+}
+
 export async function start(): Promise<void> {
   if (isStarting) {
     console.log("[bot] start() ya en curso, ignorando llamada duplicada");
@@ -107,26 +124,13 @@ export async function start(): Promise<void> {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      qrSock = sock;
       qrcodeTerminal.generate(qr, { small: true });
       try {
         const qrDataUrl = await qrcode.toDataURL(qr);
         setConnectionState({ status: "qr", qr_string: qrDataUrl, phone: null });
+        await sendQrToTelegram(qr);
       } catch {
         setConnectionState({ status: "qr", qr_string: qr, phone: null });
-      }
-
-      // Auto-request pairing code if WA_PHONE_NUMBER is set
-      const waPhone = process.env.WA_PHONE_NUMBER?.replace(/[^0-9]/g, "");
-      if (waPhone) {
-        try {
-          const code = await sock.requestPairingCode(waPhone);
-          console.log(`[bot] Pairing code: ${code}`);
-          setConnectionState({ status: "pairing", qr_string: code, phone: null });
-          qrSock = null;
-        } catch (err) {
-          console.error("[bot] Error solicitando pairing code:", err);
-        }
       }
     }
 
@@ -241,15 +245,6 @@ export async function fetchProfilePicture(phone: string): Promise<string | null>
   } catch {
     return null;
   }
-}
-
-export async function requestPairing(phone: string): Promise<string> {
-  if (!qrSock) throw new Error("No hay sesión QR activa. Reinicia el bot.");
-  const code = await qrSock.requestPairingCode(phone);
-  console.log(`[bot] Pairing code solicitado para ${phone}: ${code}`);
-  setConnectionState({ status: "pairing", qr_string: code, phone: null });
-  qrSock = null;
-  return code;
 }
 
 export async function shutdown(): Promise<void> {
