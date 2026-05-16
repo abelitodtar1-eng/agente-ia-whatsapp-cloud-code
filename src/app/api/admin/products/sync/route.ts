@@ -32,6 +32,7 @@ export async function POST() {
         udm:       String(r["UdM"] ?? ""),
         stock:     Number(r["INVENTARIO"]) || 0,
         precio:    Number(r["COSTO_UNIT_PROM"]) || 0,
+        imagen:    null,
       });
       synced++;
     }

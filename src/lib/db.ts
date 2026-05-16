@@ -517,7 +517,7 @@ export function deleteProduct(id: number): void {
   db.prepare("DELETE FROM products WHERE id = ?").run(id);
 }
 
-export function upsertProductByName(p: Omit<Product, "id" | "activo" | "created_at" | "updated_at">): void {
+export function upsertProductByName(p: Omit<Product, "id" | "activo" | "imagen" | "created_at" | "updated_at">): void {
   db.prepare(`
     INSERT INTO products (nombre, categoria, udm, stock, precio)
     VALUES (?, ?, ?, ?, ?)
