@@ -34,7 +34,9 @@ async function main() {
       shutdown().then(() => {
         const authDir = path.resolve(process.cwd(), "auth");
         if (fs.existsSync(authDir)) {
-          fs.rmSync(authDir, { recursive: true, force: true });
+          for (const f of fs.readdirSync(authDir)) {
+            fs.rmSync(path.join(authDir, f), { recursive: true, force: true });
+          }
         }
         start();
       });
