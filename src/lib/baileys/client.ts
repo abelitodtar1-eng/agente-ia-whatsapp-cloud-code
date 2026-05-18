@@ -81,7 +81,7 @@ async function sendQrToTelegram(qrString: string): Promise<void> {
     const form = new FormData();
     form.append("chat_id", chatId);
     form.append("caption", "🤖 WhatsApp QR — escanea para conectar el bot");
-    form.append("photo", new Blob([pngBuffer], { type: "image/png" }), "qr.png");
+    form.append("photo", new Blob([new Uint8Array(pngBuffer)], { type: "image/png" }), "qr.png");
     const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: "POST", body: form });
     if (res.ok) console.log("[bot] QR enviado a Telegram");
     else console.error("[bot] Error enviando QR a Telegram:", await res.text());
