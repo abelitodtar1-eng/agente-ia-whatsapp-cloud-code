@@ -155,13 +155,24 @@ export async function start(): Promise<void> {
       const code = (lastDisconnect?.error as Boom)?.output?.statusCode;
       console.log("[bot] Conexión cerrada, código:", code);
 
-      // Logged out or auth revoked — need fresh QR, don't reconnect with same creds
+      // Logged out or auth revoked — need fresh QR
       if (code === DisconnectReason.loggedOut || code === 401) {
         cleanupHandle();
         clearAuth();
         setConnectionState({ status: "disconnected", qr_string: null, phone: null });
         clearReconnectTimer();
-        reconnectTimer = setTimeout(() => start(), 3000);
+        reconnectTimer = setTimeout(() => start(), 10000);
+        return;
+      }
+
+      // QR timeout (408) — wait longer to avoid WA rate limiting
+      if (code === 408) {
+        cleanupHandle();
+        clearAuth();
+        setConnectionState({ status: "disconnected", qr_string: null, phone: null });
+        console.log("[bot] QR timeout 408: esperando 15s antes de generar nuevo QR...");
+        clearReconnectTimer();
+        reconnectTimer = setTimeout(() => start(), 15000);
         return;
       }
 
