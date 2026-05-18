@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { QRScreen } from "./QRScreen";
+import { ConectarView } from "./ConectarView";
 import { DashboardHeader } from "./DashboardHeader";
 import { ConversationList } from "./ConversationList";
 import { ConversationPanel } from "./ConversationPanel";
@@ -24,12 +24,7 @@ interface Conversation {
   last_message_role: string | null;
 }
 
-interface ConnectionState {
-  status: string;
-  phone: string | null;
-}
-
-type Tab = "home" | "conversations" | "contacts" | "webhook" | "dashboard" | "chat" | "tienda";
+type Tab = "home" | "conversations" | "contacts" | "webhook" | "dashboard" | "chat" | "tienda" | "conectar";
 
 export function ConnectionGate() {
   const router = useRouter();
@@ -37,7 +32,6 @@ export function ConnectionGate() {
   const [phone, setPhone] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [checking, setChecking] = useState(true);
   const [tab, setTab] = useState<Tab>("home");
   const [me, setMe] = useState<{ username: string; role: string } | null>(null);
 
@@ -45,21 +39,17 @@ export function ConnectionGate() {
     fetch("/api/auth/me").then(r => r.ok ? r.json() : null).then(data => { if (data) setMe(data); });
   }, []);
 
-  async function handleAuthLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-  }
-
+  // Initial WA status check (non-blocking)
   useEffect(() => {
     fetch("/api/connection/status")
-      .then((r) => r.json())
-      .then((data: ConnectionState) => {
+      .then(r => r.json())
+      .then((data: { status: string; phone: string | null }) => {
         if (data.status === "connected" && data.phone) {
           setPhone(data.phone);
           setConnected(true);
         }
       })
-      .finally(() => setChecking(false));
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -77,12 +67,17 @@ export function ConnectionGate() {
     }
   }
 
+  async function handleAuthLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
+
   function handleConnected(connectedPhone: string) {
     setPhone(connectedPhone);
     setConnected(true);
   }
 
-  function handleDisconnect() {
+  function handleDisconnected() {
     setConnected(false);
     setPhone(null);
     setSelectedId(null);
@@ -92,9 +87,7 @@ export function ConnectionGate() {
   function handleSelect(id: number) {
     setSelectedId(id);
     fetch(`/api/conversations/${id}/read`, { method: "PATCH" });
-    setConversations((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, unread_count: 0 } : c))
-    );
+    setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c));
   }
 
   function handleDelete() {
@@ -103,35 +96,17 @@ export function ConnectionGate() {
   }
 
   function handleNameUpdated(id: number, name: string) {
-    setConversations((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, name: name.trim() || null } : c))
-    );
+    setConversations(prev => prev.map(c => c.id === id ? { ...c, name: name.trim() || null } : c));
   }
 
   function handlePhoneAliasUpdated(id: number, alias: string) {
-    setConversations((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, phone_alias: alias.trim() || null } : c))
-    );
+    setConversations(prev => prev.map(c => c.id === id ? { ...c, phone_alias: alias.trim() || null } : c));
   }
 
-  if (checking) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#0a0c10" }}>
-        <div style={{ width: 24, height: 24, border: "2px solid #6c63ff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-
-  if (!connected) {
-    return <QRScreen onConnected={handleConnected} />;
-  }
-
-  const selectedConversation = conversations.find((c) => c.id === selectedId) ?? null;
-
+  const selectedConversation = conversations.find(c => c.id === selectedId) ?? null;
   const totalUnread = conversations.reduce((s, c) => s + c.unread_count, 0);
 
-  const TABS: { key: Tab; label: string; badge?: number }[] = [
+  const TABS: { key: Tab; label: string; badge?: number; dot?: string }[] = [
     { key: "home", label: "Inicio" },
     { key: "conversations", label: "Conversaciones", badge: totalUnread },
     { key: "contacts", label: "Contactos" },
@@ -139,6 +114,7 @@ export function ConnectionGate() {
     { key: "dashboard", label: "Dashboard" },
     { key: "chat", label: "Chat IA" },
     { key: "tienda", label: "Tienda" },
+    { key: "conectar", label: "Conectar", dot: connected ? "#00d4aa" : "#ff6b6b" },
   ];
 
   return (
@@ -162,19 +138,17 @@ export function ConnectionGate() {
 
       <DashboardHeader
         phone={phone}
-        onDisconnect={handleDisconnect}
+        connected={connected}
         selectedConversation={selectedConversation}
         onModeChange={(newMode) => {
           if (!selectedConversation) return;
-          setConversations((prev) =>
-            prev.map((c) => (c.id === selectedConversation.id ? { ...c, mode: newMode } : c))
-          );
+          setConversations(prev => prev.map(c => c.id === selectedConversation.id ? { ...c, mode: newMode } : c));
         }}
       />
 
       {/* Tab bar */}
       <div style={{ display: "flex", borderBottom: "1px solid #2a2d3e", background: "#1a1d27", flexShrink: 0 }}>
-        {TABS.map(({ key, label, badge }) => (
+        {TABS.map(({ key, label, badge, dot }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -190,12 +164,19 @@ export function ConnectionGate() {
               <span style={{ background: "#ff6b6b", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: "50%", minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>
                 {badge}
               </span>
+            ) : dot ? (
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: dot, flexShrink: 0 }} />
             ) : null}
           </button>
         ))}
       </div>
 
-      {tab === "home" ? (
+      {/* Tab content */}
+      {tab === "conectar" ? (
+        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+          <ConectarView onConnected={handleConnected} onDisconnected={handleDisconnected} />
+        </div>
+      ) : tab === "home" ? (
         <div style={{ flex: 1, overflow: "hidden" }}>
           <HomeView onGoToConversation={(id) => { handleSelect(id); setTab("conversations"); }} />
         </div>
@@ -221,17 +202,13 @@ export function ConnectionGate() {
             conversations={conversations}
             onNameUpdated={handleNameUpdated}
             onPhoneAliasUpdated={handlePhoneAliasUpdated}
-            onDeleted={(id) => { setConversations((prev) => prev.filter((c) => c.id !== id)); }}
+            onDeleted={(id) => { setConversations(prev => prev.filter(c => c.id !== id)); }}
           />
         </div>
       ) : (
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           <aside style={{ width: 280, borderRight: "1px solid #2a2d3e", overflowY: "auto", flexShrink: 0 }}>
-            <ConversationList
-              conversations={conversations}
-              selectedId={selectedId}
-              onSelect={handleSelect}
-            />
+            <ConversationList conversations={conversations} selectedId={selectedId} onSelect={handleSelect} />
           </aside>
           <main style={{ flex: 1, overflow: "hidden" }}>
             {selectedConversation ? (
@@ -239,11 +216,7 @@ export function ConnectionGate() {
                 key={selectedConversation.id}
                 conversation={selectedConversation}
                 onModeChange={(newMode) => {
-                  setConversations((prev) =>
-                    prev.map((c) =>
-                      c.id === selectedConversation.id ? { ...c, mode: newMode } : c
-                    )
-                  );
+                  setConversations(prev => prev.map(c => c.id === selectedConversation.id ? { ...c, mode: newMode } : c));
                 }}
                 onDelete={handleDelete}
               />

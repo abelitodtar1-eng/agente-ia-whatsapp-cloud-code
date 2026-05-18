@@ -13,18 +13,12 @@ interface Conversation {
 
 interface DashboardHeaderProps {
   phone: string | null;
-  onDisconnect: () => void;
+  connected: boolean;
   selectedConversation: Conversation | null;
   onModeChange: (mode: "AI" | "HUMAN") => void;
 }
 
-export function DashboardHeader({ phone, onDisconnect, selectedConversation, onModeChange }: DashboardHeaderProps) {
-  async function handleDisconnect() {
-    if (!confirm("¿Desconectar el número de WhatsApp?")) return;
-    await fetch("/api/connection/disconnect", { method: "POST" });
-    onDisconnect();
-  }
-
+export function DashboardHeader({ phone, connected, selectedConversation, onModeChange }: DashboardHeaderProps) {
   async function handleModeToggle() {
     if (!selectedConversation) return;
     const next = selectedConversation.mode === "AI" ? "HUMAN" : "AI";
@@ -39,8 +33,9 @@ export function DashboardHeader({ phone, onDisconnect, selectedConversation, onM
   return (
     <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 20px", background: CARD, borderBottom: `1px solid ${BORD}`, flexShrink: 0 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: TEAL }} />
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: connected ? TEAL : MUTED }} />
         <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>CRM DTAR</span>
+        {phone && <span style={{ fontSize: 11, color: MUTED }}>· +{phone}</span>}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <SystemPromptEditor />
@@ -59,13 +54,6 @@ export function DashboardHeader({ phone, onDisconnect, selectedConversation, onM
             {selectedConversation.mode === "AI" ? "IA activo" : "Modo humano"}
           </button>
         )}
-        {phone && <span style={{ fontSize: 11, color: MUTED }}>+{phone}</span>}
-        <button
-          onClick={handleDisconnect}
-          style={{ padding: "5px 14px", fontSize: 11, background: "transparent", border: `1px solid ${BORD}`, color: MUTED, borderRadius: 8, cursor: "pointer" }}
-        >
-          Desconectar
-        </button>
       </div>
     </header>
   );
