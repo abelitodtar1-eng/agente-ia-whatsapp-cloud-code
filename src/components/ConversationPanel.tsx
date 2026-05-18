@@ -7,6 +7,14 @@ const BG = "#0a0c10"; const CARD = "#1a1d27"; const BORD = "#2a2d3e"; const PRP 
 const RED = "#ff6b6b"; const TEXT = "#e2e8f0"; const MUTED = "#8892a4"; const TEAL = "#00d4aa";
 const YELL = "#ffd166";
 
+const PRESET_TAGS = ["mayorista", "minorista", "vip", "inactivo", "nuevo"];
+
+function tagColor(tag: string): string {
+  let h = 0;
+  for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) & 0xffff;
+  return `hsl(${h % 360}, 60%, 55%)`;
+}
+
 interface Message {
   id: number;
   role: "user" | "assistant" | "human";
@@ -219,6 +227,11 @@ export function ConversationPanel({ conversation, onModeChange, onDelete }: Conv
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Tags
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [showTagInput, setShowTagInput] = useState(false);
+
   // Notes
   const [notes, setNotes] = useState<Note[]>([]);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -234,6 +247,7 @@ export function ConversationPanel({ conversation, onModeChange, onDelete }: Conv
     loadMessages();
     loadPayments();
     loadNotes();
+    loadTags();
     if (quickReplies.length === 0) loadQuickReplies();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversation.id]);
@@ -241,6 +255,30 @@ export function ConversationPanel({ conversation, onModeChange, onDelete }: Conv
   async function loadPayments() {
     const res = await fetch(`/api/payments/${conversation.id}`);
     if (res.ok) setPayments(await res.json());
+  }
+
+  async function loadTags() {
+    const res = await fetch(`/api/conversations/${conversation.id}/tags`);
+    if (res.ok) setTags(await res.json());
+  }
+
+  async function handleAddTag(tag: string) {
+    const t = tag.trim().toLowerCase();
+    if (!t || tags.includes(t)) return;
+    await fetch(`/api/conversations/${conversation.id}/tags`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tag: t }),
+    });
+    setTags(prev => [...prev, t].sort());
+    setTagInput("");
+  }
+
+  async function handleRemoveTag(tag: string) {
+    await fetch(`/api/conversations/${conversation.id}/tags`, {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tag }),
+    });
+    setTags(prev => prev.filter(t => t !== tag));
   }
 
   async function loadNotes() {
@@ -331,7 +369,8 @@ export function ConversationPanel({ conversation, onModeChange, onDelete }: Conv
       )}
 
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: `1px solid ${BORD}`, background: CARD, flexShrink: 0 }}>
+      <div style={{ borderBottom: `1px solid ${BORD}`, background: CARD, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px" }}>
         <div>
           <p style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{conversation.name ?? conversation.phone}</p>
           <p style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{conversation.phone}</p>
@@ -356,6 +395,40 @@ export function ConversationPanel({ conversation, onModeChange, onDelete }: Conv
           >
             Borrar
           </button>
+        </div>
+        </div>
+
+        {/* Tags row */}
+        <div style={{ padding: "4px 16px 8px", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          {tags.map(tag => (
+            <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 12, background: `${tagColor(tag)}22`, color: tagColor(tag), border: `1px solid ${tagColor(tag)}55` }}>
+              {tag}
+              <button onClick={() => handleRemoveTag(tag)} style={{ background: "transparent", border: "none", color: tagColor(tag), cursor: "pointer", fontSize: 12, lineHeight: 1, padding: 0, opacity: .7 }}>×</button>
+            </span>
+          ))}
+          {showTagInput ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <input
+                autoFocus
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") { handleAddTag(tagInput); setShowTagInput(false); }
+                  if (e.key === "Escape") { setShowTagInput(false); setTagInput(""); }
+                }}
+                placeholder="etiqueta..."
+                style={{ fontSize: 11, background: BG, border: `1px solid ${BORD}`, borderRadius: 6, padding: "2px 8px", color: TEXT, outline: "none", width: 100 }}
+              />
+              {PRESET_TAGS.filter(p => !tags.includes(p)).map(p => (
+                <button key={p} onClick={() => { handleAddTag(p); setShowTagInput(false); }}
+                  style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, border: `1px solid ${BORD}`, background: "transparent", color: MUTED, cursor: "pointer" }}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <button onClick={() => setShowTagInput(true)} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 12, border: `1px dashed ${BORD}`, background: "transparent", color: MUTED, cursor: "pointer" }}>+ etiqueta</button>
+          )}
         </div>
       </div>
 

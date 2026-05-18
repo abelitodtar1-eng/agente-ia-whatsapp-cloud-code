@@ -1,9 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const BG = "#0a0c10"; const CARD = "#1a1d27"; const BORD = "#2a2d3e"; const PRP = "#6c63ff";
 const TEAL = "#00d4aa"; const RED = "#ff6b6b"; const TEXT = "#e2e8f0"; const MUTED = "#8892a4";
 const YELL = "#ffd166";
+
+function tagColor(tag: string): string {
+  let h = 0;
+  for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) & 0xffff;
+  return `hsl(${h % 360}, 60%, 55%)`;
+}
 
 interface Conversation {
   id: number;
@@ -84,6 +90,20 @@ export function ContactsView({ conversations, onNameUpdated, onPhoneAliasUpdated
   const [editing, setEditing] = useState<Conversation | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [tagsMap, setTagsMap] = useState<Record<number, string[]>>({});
+
+  useEffect(() => {
+    if (conversations.length === 0) return;
+    Promise.all(
+      conversations.map(c =>
+        fetch(`/api/conversations/${c.id}/tags`).then(r => r.ok ? r.json() : []).then((tags: string[]) => ({ id: c.id, tags }))
+      )
+    ).then(results => {
+      const map: Record<number, string[]> = {};
+      results.forEach(r => { map[r.id] = r.tags; });
+      setTagsMap(map);
+    });
+  }, [conversations]);
 
   async function handleSaveEdit(name: string, phoneAlias: string) {
     if (!editing) return;
@@ -117,14 +137,14 @@ export function ContactsView({ conversations, onNameUpdated, onPhoneAliasUpdated
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead style={{ position: "sticky", top: 0, background: CARD, borderBottom: `1px solid ${BORD}` }}>
               <tr>
-                {["Nombre", "Teléfono", "ID interno", "Modo", "Último msg", ""].map((h) => (
+                {["Nombre", "Teléfono", "ID interno", "Etiquetas", "Modo", "Último msg", ""].map((h) => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {conversations.length === 0 && (
-                <tr><td colSpan={6} style={{ padding: "48px", textAlign: "center", fontSize: 12, color: MUTED }}>Sin contactos aún</td></tr>
+                <tr><td colSpan={7} style={{ padding: "48px", textAlign: "center", fontSize: 12, color: MUTED }}>Sin contactos aún</td></tr>
               )}
               {conversations.map((c) => (
                 <tr key={c.id} style={{ borderBottom: `1px solid ${BORD}` }}>
@@ -135,6 +155,16 @@ export function ContactsView({ conversations, onNameUpdated, onPhoneAliasUpdated
                   </td>
                   <td style={{ ...tdStyle, color: TEXT }}>{c.phone_alias ?? <span style={{ color: MUTED }}>—</span>}</td>
                   <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: 11, color: MUTED }}>{c.phone}</td>
+                  <td style={tdStyle}>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      {(tagsMap[c.id] ?? []).map(tag => (
+                        <span key={tag} style={{ fontSize: 9, fontWeight: 700, padding: "1px 7px", borderRadius: 10, background: `${tagColor(tag)}22`, color: tagColor(tag), border: `1px solid ${tagColor(tag)}55` }}>
+                          {tag}
+                        </span>
+                      ))}
+                      {!(tagsMap[c.id]?.length) && <span style={{ fontSize: 10, color: MUTED }}>—</span>}
+                    </div>
+                  </td>
                   <td style={tdStyle}>
                     <span style={{ fontSize: 10, padding: "2px 10px", borderRadius: 20, fontWeight: 700, background: c.mode === "AI" ? "rgba(0,212,170,.12)" : "rgba(255,209,102,.12)", color: c.mode === "AI" ? TEAL : YELL }}>
                       {c.mode === "AI" ? "IA" : "Humano"}

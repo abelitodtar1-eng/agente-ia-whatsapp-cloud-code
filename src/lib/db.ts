@@ -819,3 +819,32 @@ export function countOrdersByStatus(): Record<OrderStatus, number> {
   rows.forEach(r => { base[r.status] = r.c; });
   return base;
 }
+
+// ─── Contact tags ─────────────────────────────────────────────────────────────
+db.prepare(`CREATE TABLE IF NOT EXISTS contact_tags (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  tag             TEXT NOT NULL,
+  created_at      INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE(conversation_id, tag)
+)`).run();
+
+export function getTagsByConversation(conversationId: number): string[] {
+  return (db.prepare("SELECT tag FROM contact_tags WHERE conversation_id = ? ORDER BY tag").all(conversationId) as { tag: string }[]).map(r => r.tag);
+}
+
+export function addTag(conversationId: number, tag: string): void {
+  db.prepare("INSERT OR IGNORE INTO contact_tags (conversation_id, tag) VALUES (?,?)").run(conversationId, tag.trim().toLowerCase());
+}
+
+export function removeTag(conversationId: number, tag: string): void {
+  db.prepare("DELETE FROM contact_tags WHERE conversation_id = ? AND tag = ?").run(conversationId, tag);
+}
+
+export function getAllTags(): { tag: string; count: number }[] {
+  return db.prepare("SELECT tag, COUNT(*) as count FROM contact_tags GROUP BY tag ORDER BY count DESC, tag").all() as { tag: string; count: number }[];
+}
+
+export function getConversationsByTag(tag: string): number[] {
+  return (db.prepare("SELECT conversation_id FROM contact_tags WHERE tag = ?").all(tag) as { conversation_id: number }[]).map(r => r.conversation_id);
+}
