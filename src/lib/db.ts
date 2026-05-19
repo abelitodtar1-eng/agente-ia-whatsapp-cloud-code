@@ -73,6 +73,14 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_outbox_pending ON outbox(sent, created_at);
 
+  CREATE TABLE IF NOT EXISTS status_queue (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    image_path TEXT NOT NULL,
+    caption    TEXT NOT NULL DEFAULT '',
+    sent       INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+
   CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY NOT NULL,
     value TEXT NOT NULL,
@@ -431,6 +439,21 @@ export function getPendingOutbox(): OutboxItem[] {
 
 export function markOutboxSent(id: number): void {
   db.prepare("UPDATE outbox SET sent = 1 WHERE id = ?").run(id);
+}
+
+// ─── Status queue (cross-process IPC para estados WA) ─────────────────────────
+export interface StatusQueueItem { id: number; image_path: string; caption: string }
+
+export function enqueueStatus(imagePath: string, caption: string): void {
+  db.prepare("INSERT INTO status_queue (image_path, caption) VALUES (?, ?)").run(imagePath, caption);
+}
+
+export function getPendingStatus(): StatusQueueItem[] {
+  return db.prepare("SELECT id, image_path, caption FROM status_queue WHERE sent = 0 ORDER BY created_at ASC").all() as StatusQueueItem[];
+}
+
+export function markStatusSent(id: number): void {
+  db.prepare("UPDATE status_queue SET sent = 1 WHERE id = ?").run(id);
 }
 
 // --- Settings / System Prompt ---

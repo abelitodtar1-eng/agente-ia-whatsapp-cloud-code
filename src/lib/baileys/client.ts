@@ -12,7 +12,7 @@ import qrcode from "qrcode";
 import qrcodeTerminal from "qrcode-terminal";
 import path from "node:path";
 import fs from "node:fs";
-import { setConnectionState, getPendingOutbox, markOutboxSent, resolveContactPhone } from "../db";
+import { setConnectionState, getPendingOutbox, markOutboxSent, getPendingStatus, markStatusSent, resolveContactPhone } from "../db";
 import { handleIncomingMessage } from "./handler";
 
 const AUTH_DIR = path.resolve(process.cwd(), "auth");
@@ -58,6 +58,7 @@ function phoneToJid(phone: string): string {
 
 async function startOutboxPoller(sock: WASocket) {
   return setInterval(async () => {
+    // mensajes normales
     const pending = getPendingOutbox();
     for (const item of pending) {
       const jid = phoneToJid(item.phone);
@@ -67,6 +68,21 @@ async function startOutboxPoller(sock: WASocket) {
         console.log(`[outbox] enviado a ${jid}: "${item.content.slice(0,40)}"`);
       } catch (err) {
         console.error(`[outbox] fallo enviando a ${jid}:`, err instanceof Error ? err.message : err);
+      }
+    }
+
+    // estados WA
+    const pendingStatus = getPendingStatus();
+    for (const item of pendingStatus) {
+      try {
+        const buffer = fs.readFileSync(item.image_path);
+        await sock.sendMessage("status@broadcast", { image: buffer, caption: item.caption });
+        markStatusSent(item.id);
+        console.log(`[status] enviado: "${item.caption.slice(0, 40)}"`);
+      } catch (err) {
+        console.error(`[status] fallo:`, err instanceof Error ? err.message : err);
+        // marcar como enviado para no reintentar indefinidamente si el archivo no existe
+        if (err instanceof Error && err.message.includes("ENOENT")) markStatusSent(item.id);
       }
     }
   }, 2000);
@@ -247,10 +263,6 @@ export async function start(): Promise<void> {
   });
 }
 
-export async function sendWAStatus(imageBuffer: Buffer, caption: string): Promise<void> {
-  if (!handle) throw new Error("WhatsApp no conectado");
-  await handle.sock.sendMessage("status@broadcast", { image: imageBuffer, caption });
-}
 
 export async function fetchProfilePicture(phone: string): Promise<string | null> {
   if (!handle) return null;
