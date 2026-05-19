@@ -264,9 +264,14 @@ export function DashboardView() {
   const [urgenciaFilter, setUrgFilter]  = useState("Todos");
   const [search, setSearch]             = useState("");
   const [rates, setRates] = useState<{ USD: number | null; MLC: number | null; EUR: number | null } | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
     fetch("/api/rates").then(r => r.ok ? r.json() : null).then((d: { USD: number | null; MLC: number | null; EUR: number | null } | null) => setRates(d));
+    const ratesInterval = setInterval(() => {
+      fetch("/api/rates").then(r => r.ok ? r.json() : null).then((d: { USD: number | null; MLC: number | null; EUR: number | null } | null) => setRates(d));
+    }, 60_000);
+    return () => clearInterval(ratesInterval);
   }, []);
 
   const load = useCallback(async () => {
@@ -275,6 +280,7 @@ export function DashboardView() {
       const res = await fetch("/api/dashboard");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setData(await res.json());
+      setLastUpdated(new Date());
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
@@ -283,7 +289,11 @@ export function DashboardView() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 60_000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", background: BG }}>
@@ -365,11 +375,17 @@ export function DashboardView() {
           <span style={{ background: PRP, color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 12px", borderRadius: 20, letterSpacing: ".5px" }}>
             {kpis.totalProductos} PRODUCTOS
           </span>
+          {lastUpdated && (
+            <span style={{ fontSize: 11, color: MUTED }}>
+              ↻ {lastUpdated.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </span>
+          )}
           <button
             onClick={load}
-            style={{ background: "transparent", border: `1px solid ${BORD}`, color: MUTED, fontSize: 11, padding: "4px 12px", borderRadius: 8, cursor: "pointer" }}
+            disabled={loading}
+            style={{ background: "transparent", border: `1px solid ${BORD}`, color: MUTED, fontSize: 11, padding: "4px 12px", borderRadius: 8, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? .5 : 1 }}
           >
-            Actualizar
+            {loading ? "..." : "Actualizar"}
           </button>
         </div>
       </div>
