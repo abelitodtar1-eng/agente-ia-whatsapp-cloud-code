@@ -7,13 +7,24 @@ const ollamaClient = new OpenAI({
   fetch: globalThis.fetch.bind(globalThis),
 });
 
-const HANDLE_KEYWORDS = [
+const INVENTARIO_KEYWORDS = [
   "registra", "registro", "entrada", "salida", "ajuste",
-  "stock", "inventario", "producto", "productos", "precio",
+  "stock", "inventario", "producto", "productos",
   "kardex", "busca", "buscar", "código", "codigo", "sku",
   "cuanto hay", "cuánto hay", "cuanto queda", "cuánto queda",
   "categoría", "categoria", "almacén", "almacen",
   "nuevo producto", "agregar producto",
+];
+
+const CONTABILIDAD_KEYWORDS = [
+  "cobro", "cobrar", "pago", "pagar", "factura", "facturas",
+  "cuenta", "cuentas", "balance", "saldo", "deuda",
+  "crédito", "credito", "débito", "debito",
+  "ingreso", "ingresos", "gasto", "gastos", "egreso", "egresos",
+  "contabilidad", "contador", "contable", "finanza", "finanzas",
+  "cuánto debo", "cuanto debo", "estado de cuenta",
+  "debe", "haber", "asiento", "balance general",
+  "precio", "costo", "costos", "total a pagar",
 ];
 
 const ESCALATE_KEYWORDS = [
@@ -30,26 +41,38 @@ function keywordEscalate(message: string): boolean {
   return ESCALATE_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
-function keywordHandle(message: string): boolean {
+function keywordInventario(message: string): boolean {
   const lower = message.toLowerCase();
-  return HANDLE_KEYWORDS.some((kw) => lower.includes(kw));
+  return INVENTARIO_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
-export async function triageMessage(message: string): Promise<"handle" | "escalate"> {
+function keywordContabilidad(message: string): boolean {
+  const lower = message.toLowerCase();
+  return CONTABILIDAD_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+export type TriageDecision = "inventario" | "contabilidad" | "escalate";
+
+export async function triageMessage(message: string): Promise<TriageDecision> {
   if (keywordEscalate(message)) {
     console.log("[triage] keyword match → escalate");
     return "escalate";
   }
 
-  if (keywordHandle(message)) {
-    console.log("[triage] handle keyword → handle");
-    return "handle";
+  if (keywordInventario(message)) {
+    console.log("[triage] keyword match → inventario");
+    return "inventario";
   }
 
-  if (!process.env.OLLAMA_BASE_URL) return "handle";
+  if (keywordContabilidad(message)) {
+    console.log("[triage] keyword match → contabilidad");
+    return "contabilidad";
+  }
+
+  if (!process.env.OLLAMA_BASE_URL) return "inventario";
 
   const { text: systemPrompt } = getSystemPrompt();
-  if (!systemPrompt?.trim()) return "handle";
+  if (!systemPrompt?.trim()) return "inventario";
 
   try {
     const response = await ollamaClient.chat.completions.create({
@@ -57,7 +80,7 @@ export async function triageMessage(message: string): Promise<"handle" | "escala
       messages: [
         {
           role: "system",
-          content: systemPrompt + '\n\nIMPORTANT: Reply with ONLY valid JSON, nothing else. No explanation. No markdown. Example: {"action":"handle"}',
+          content: systemPrompt + '\n\nIMPORTANT: Reply with ONLY valid JSON, nothing else. No explanation. No markdown. Valid actions: "inventario", "contabilidad", "escalate". Example: {"action":"inventario"}',
         },
         { role: "user", content: message },
       ],
@@ -67,13 +90,14 @@ export async function triageMessage(message: string): Promise<"handle" | "escala
     const raw = (response.choices[0].message.content ?? "").trim();
     try {
       const data = JSON.parse(raw) as { action?: string };
-      return data.action === "escalate" ? "escalate" : "handle";
+      if (data.action === "escalate") return "escalate";
+      if (data.action === "contabilidad") return "contabilidad";
+      return "inventario";
     } catch {
-      // strict: only escalate if raw is exactly the escalate JSON — no text fallback
-      return "handle";
+      return "inventario";
     }
   } catch (err) {
-    console.error("[triage] llm error, defaulting to handle:", err instanceof Error ? err.message : err);
-    return "handle";
+    console.error("[triage] llm error, defaulting to inventario:", err instanceof Error ? err.message : err);
+    return "inventario";
   }
 }

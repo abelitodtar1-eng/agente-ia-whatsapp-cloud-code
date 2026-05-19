@@ -247,6 +247,11 @@ export async function start(): Promise<void> {
   });
 }
 
+export async function sendWAStatus(imageBuffer: Buffer, caption: string): Promise<void> {
+  if (!handle) throw new Error("WhatsApp no conectado");
+  await handle.sock.sendMessage("status@broadcast", { image: imageBuffer, caption });
+}
+
 export async function fetchProfilePicture(phone: string): Promise<string | null> {
   if (!handle) return null;
   try {

@@ -81,6 +81,8 @@ db.exec(`
 
   INSERT OR IGNORE INTO settings (key, value) VALUES ('system_prompt', '__INITIAL__');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_url', '');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_inventario', '');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_contabilidad', '');
 `);
 
 
@@ -462,6 +464,22 @@ export function setWebhookUrl(url: string): void {
   ).run(url);
 }
 
+export function getInventarioWebhookUrl(): string {
+  return getSetting("n8n_webhook_inventario");
+}
+
+export function setInventarioWebhookUrl(url: string): void {
+  setSetting("n8n_webhook_inventario", url);
+}
+
+export function getContabilidadWebhookUrl(): string {
+  return getSetting("n8n_webhook_contabilidad");
+}
+
+export function setContabilidadWebhookUrl(url: string): void {
+  setSetting("n8n_webhook_contabilidad", url);
+}
+
 export function setSystemPrompt(text: string): void {
   db.prepare(
     "UPDATE settings SET value = ?, updated_at = unixepoch() WHERE key = 'system_prompt'"
@@ -818,6 +836,41 @@ export function countOrdersByStatus(): Record<OrderStatus, number> {
   const base: Record<OrderStatus, number> = { draft: 0, confirmed: 0, paid: 0, shipped: 0, cancelled: 0 };
   rows.forEach(r => { base[r.status] = r.c; });
   return base;
+}
+
+// ─── Catálogo ─────────────────────────────────────────────────────────────────
+db.prepare(`CREATE TABLE IF NOT EXISTS catalogo_items (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  title       TEXT NOT NULL,
+  description TEXT,
+  filename    TEXT NOT NULL,
+  created_at  INTEGER NOT NULL DEFAULT (unixepoch())
+)`).run();
+
+export interface CatalogoItem {
+  id: number;
+  title: string;
+  description: string | null;
+  filename: string;
+  created_at: number;
+}
+
+export function listCatalogo(): CatalogoItem[] {
+  return db.prepare("SELECT * FROM catalogo_items ORDER BY created_at DESC").all() as CatalogoItem[];
+}
+
+export function createCatalogoItem(title: string, description: string | null, filename: string): CatalogoItem {
+  return db.prepare(
+    "INSERT INTO catalogo_items (title, description, filename) VALUES (?,?,?) RETURNING *"
+  ).get(title, description, filename) as CatalogoItem;
+}
+
+export function getCatalogoItem(id: number): CatalogoItem | undefined {
+  return db.prepare("SELECT * FROM catalogo_items WHERE id = ?").get(id) as CatalogoItem | undefined;
+}
+
+export function deleteCatalogoItem(id: number): void {
+  db.prepare("DELETE FROM catalogo_items WHERE id = ?").run(id);
 }
 
 // ─── Contact tags ─────────────────────────────────────────────────────────────

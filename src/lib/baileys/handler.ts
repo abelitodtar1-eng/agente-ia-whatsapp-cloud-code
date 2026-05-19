@@ -10,10 +10,12 @@ import {
   getAppointmentsByConversation,
   getSystemPrompt,
   getWebhookUrl,
+  getInventarioWebhookUrl,
+  getContabilidadWebhookUrl,
   setMode,
   type Conversation,
 } from "../db";
-import { triageMessage } from "../triage";
+import { triageMessage, type TriageDecision } from "../triage";
 
 function extractText(msg: proto.IWebMessageInfo): string | null {
   return (
@@ -23,12 +25,30 @@ function extractText(msg: proto.IWebMessageInfo): string | null {
   );
 }
 
-async function processWithN8N(phone: string, message: string): Promise<string> {
+function resolveWebhookUrl(decision: TriageDecision): string {
+  if (decision === "contabilidad") {
+    return (
+      process.env.N8N_WEBHOOK_CONTABILIDAD ||
+      getContabilidadWebhookUrl() ||
+      process.env.N8N_WEBHOOK_URL ||
+      getWebhookUrl()
+    );
+  }
+  return (
+    process.env.N8N_WEBHOOK_INVENTARIO ||
+    getInventarioWebhookUrl() ||
+    process.env.N8N_WEBHOOK_URL ||
+    getWebhookUrl()
+  );
+}
+
+async function processWithN8N(phone: string, message: string, decision: TriageDecision): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60_000);
   try {
-    const webhookUrl = process.env.N8N_WEBHOOK_URL ?? getWebhookUrl();
+    const webhookUrl = resolveWebhookUrl(decision);
     if (!webhookUrl) throw new Error("Webhook URL no configurada");
+    console.log(`[handler] → n8n [${decision}] phone=${phone}`);
     const resp = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -110,8 +130,7 @@ export async function handleIncomingMessage(
       return;
     }
 
-    console.log(`[handler] → n8n phone=${phone}`);
-    const reply = await processWithN8N(phone, text);
+    const reply = await processWithN8N(phone, text, decision);
     insertMessage(conversation.id, "assistant", reply);
     await sock.sendMessage(remoteJid, { text: reply });
     console.log(`[handler] ← reply sent (${reply.length} chars)`);
