@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
-import { scryptSync, randomBytes } from "node:crypto";
+import { scryptSync, randomBytes, randomUUID } from "node:crypto";
 
 const DATA_DIR = path.resolve(process.cwd(), "data");
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -962,6 +962,9 @@ export function getConversationsByTag(tag: string): number[] {
 // ─── Admin phone ──────────────────────────────────────────────────────────────
 db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('admin_phone', '')").run();
 
+// estados_api_token — token estático para autenticar llamadas de n8n al endpoint de estados
+db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('estados_api_token', ?)").run(randomUUID());
+
 export function getAdminPhone(): string {
   return getSetting("admin_phone");
 }
@@ -974,4 +977,8 @@ export function findProductByName(nombre: string): Product | undefined {
     db.prepare("SELECT * FROM products WHERE lower(nombre) = lower(?)").get(nombre) ??
     db.prepare("SELECT * FROM products WHERE lower(nombre) LIKE lower(?) LIMIT 1").get(`%${nombre}%`)
   ) as Product | undefined;
+}
+
+export function getEstadosApiToken(): string {
+  return getSetting("estados_api_token");
 }
