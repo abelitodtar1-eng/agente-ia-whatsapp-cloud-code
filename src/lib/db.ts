@@ -456,6 +456,11 @@ export function markStatusSent(id: number): void {
   db.prepare("UPDATE status_queue SET sent = 1 WHERE id = ?").run(id);
 }
 
+export function getAllContactJids(): string[] {
+  const rows = db.prepare("SELECT phone FROM conversations").all() as { phone: string }[];
+  return rows.map(r => `${r.phone}@s.whatsapp.net`);
+}
+
 // --- Settings / System Prompt ---
 
 export function getSystemPrompt(): { text: string; updatedAt: number } {

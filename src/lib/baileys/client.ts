@@ -12,7 +12,7 @@ import qrcode from "qrcode";
 import qrcodeTerminal from "qrcode-terminal";
 import path from "node:path";
 import fs from "node:fs";
-import { setConnectionState, getPendingOutbox, markOutboxSent, getPendingStatus, markStatusSent, resolveContactPhone } from "../db";
+import { setConnectionState, getPendingOutbox, markOutboxSent, getPendingStatus, markStatusSent, getAllContactJids, resolveContactPhone } from "../db";
 import { handleIncomingMessage } from "./handler";
 
 const AUTH_DIR = path.resolve(process.cwd(), "auth");
@@ -73,16 +73,22 @@ async function startOutboxPoller(sock: WASocket) {
 
     // estados WA
     const pendingStatus = getPendingStatus();
-    for (const item of pendingStatus) {
-      try {
-        const buffer = fs.readFileSync(item.image_path);
-        await sock.sendMessage("status@broadcast", { image: buffer, caption: item.caption });
-        markStatusSent(item.id);
-        console.log(`[status] enviado: "${item.caption.slice(0, 40)}"`);
-      } catch (err) {
-        console.error(`[status] fallo:`, err instanceof Error ? err.message : err);
-        // marcar como enviado para no reintentar indefinidamente si el archivo no existe
-        if (err instanceof Error && err.message.includes("ENOENT")) markStatusSent(item.id);
+    if (pendingStatus.length > 0) {
+      const statusJidList = getAllContactJids();
+      for (const item of pendingStatus) {
+        try {
+          const buffer = fs.readFileSync(item.image_path);
+          await sock.sendMessage(
+            "status@broadcast",
+            { image: buffer, caption: item.caption },
+            { statusJidList }
+          );
+          markStatusSent(item.id);
+          console.log(`[status] enviado (${statusJidList.length} contactos): "${item.caption.slice(0, 40)}"`);
+        } catch (err) {
+          console.error(`[status] fallo:`, err instanceof Error ? err.message : err);
+          if (err instanceof Error && err.message.includes("ENOENT")) markStatusSent(item.id);
+        }
       }
     }
   }, 2000);
