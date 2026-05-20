@@ -173,6 +173,8 @@ export async function start(): Promise<void> {
       setConnectionState({ status: "connected", qr_string: null, phone });
       console.log("[bot] Conectado:", phone);
 
+      cleanupHandle(); // clears waContactJids — seed AFTER this call
+
       // Pre-populate waContactJids from auth store session files (contacts with established sessions)
       if (fs.existsSync(AUTH_DIR)) {
         for (const f of fs.readdirSync(AUTH_DIR)) {
@@ -185,7 +187,6 @@ export async function start(): Promise<void> {
         console.log(`[contacts] auth store: ${waContactJids.size} contactos pre-cargados`);
       }
 
-      cleanupHandle();
       const outboxInterval = await startOutboxPoller(sock);
       handle = { sock, outboxInterval };
     }
