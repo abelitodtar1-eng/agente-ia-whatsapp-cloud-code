@@ -10,11 +10,7 @@ import { WebhookView } from "./WebhookView";
 import { DashboardView } from "./DashboardView";
 import { ChatbotView } from "./ChatbotView";
 import { HomeView } from "./HomeView";
-import { PedidosView } from "./PedidosView";
-import { CatalogoView } from "./CatalogoView";
 import { ProductosView } from "./ProductosView";
-import { NovedadesView } from "./NovedadesView";
-import { EstadosView } from "./EstadosView";
 
 interface Conversation {
   id: number;
@@ -28,7 +24,7 @@ interface Conversation {
   last_message_role: string | null;
 }
 
-type Tab = "home" | "conversations" | "contacts" | "webhook" | "dashboard" | "chat" | "pedidos" | "catalogo" | "productos" | "novedades" | "estados" | "conectar";
+type Tab = "home" | "conversations" | "contacts" | "webhook" | "dashboard" | "chat" | "productos" | "conectar";
 
 export function ConnectionGate() {
   const router = useRouter();
@@ -117,11 +113,7 @@ export function ConnectionGate() {
     { key: "webhook", label: "Webhook" },
     { key: "dashboard", label: "Dashboard" },
     { key: "chat", label: "Chat IA" },
-    { key: "pedidos", label: "Pedidos" },
-    { key: "catalogo", label: "Catálogo" },
     { key: "productos", label: "Productos" },
-    { key: "novedades", label: "Novedades" },
-    { key: "estados", label: "Estados" },
     { key: "conectar", label: "Conectar", dot: connected ? "#00d4aa" : "#ff6b6b" },
   ];
 
@@ -180,25 +172,9 @@ export function ConnectionGate() {
       </div>
 
       {/* Tab content */}
-      {tab === "novedades" ? (
-        <div style={{ flex: 1, overflow: "hidden" }}>
-          <NovedadesView />
-        </div>
-      ) : tab === "estados" ? (
-        <div style={{ flex: 1, overflow: "hidden" }}>
-          <EstadosView onGoToNovedades={() => setTab("novedades")} />
-        </div>
-      ) : tab === "catalogo" ? (
-        <div style={{ flex: 1, overflow: "hidden" }}>
-          <CatalogoView />
-        </div>
-      ) : tab === "productos" ? (
+      {tab === "productos" ? (
         <div style={{ flex: 1, overflow: "hidden" }}>
           <ProductosView />
-        </div>
-      ) : tab === "pedidos" ? (
-        <div style={{ flex: 1, overflow: "hidden" }}>
-          <PedidosView />
         </div>
       ) : tab === "conectar" ? (
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>

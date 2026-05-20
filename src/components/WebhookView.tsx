@@ -5,48 +5,7 @@ const BG = "#0a0c10"; const CARD = "#1a1d27"; const BORD = "#2a2d3e"; const PRP 
 const TEAL = "#00d4aa"; const RED = "#ff6b6b"; const TEXT = "#e2e8f0"; const MUTED = "#8892a4";
 
 
-function EstadosTokenSection() {
-  const [token, setToken] = useState("");
-  const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/settings/estados-token")
-      .then(r => r.json())
-      .then((d: { token: string }) => setToken(d.token ?? ""));
-  }, []);
-
-  async function copy() {
-    await navigator.clipboard.writeText(token);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <div style={{ background: CARD, border: `1px solid rgba(0,212,170,.25)`, borderRadius: 10, padding: "18px 20px", marginTop: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 14 }}>📸</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Token — Automatización Estados</span>
-        <span style={{ fontSize: 10, color: TEAL, background: "rgba(0,212,170,.1)", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>n8n</span>
-      </div>
-      <p style={{ fontSize: 11, color: MUTED, marginBottom: 14, lineHeight: 1.6 }}>
-        Usa este token en n8n como header <code style={{ color: TEXT }}>Authorization: Bearer &lt;token&gt;</code> para llamar a <code style={{ color: TEXT }}>POST /api/admin/estados/publish</code>.
-      </p>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <input
-          readOnly
-          value={token}
-          style={{ flex: 1, background: BG, border: `1px solid ${BORD}`, borderRadius: 8, padding: "9px 12px", color: TEXT, fontSize: 12, fontFamily: "monospace", outline: "none" }}
-        />
-        <button
-          onClick={copy}
-          style={{ padding: "9px 16px", fontSize: 12, fontWeight: 600, background: copied ? TEAL : "transparent", color: copied ? "#0a0c10" : TEAL, border: `1px solid ${TEAL}`, borderRadius: 8, cursor: "pointer", transition: "all .15s", whiteSpace: "nowrap" }}
-        >
-          {copied ? "✓ Copiado" : "Copiar"}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function WebhookField({
   label, icon, description, field, placeholder,
@@ -193,7 +152,6 @@ export function WebhookView() {
           placeholder="https://tu-n8n.host/webhook/vendedora-id"
         />
 
-        <EstadosTokenSection />
       </div>
     </div>
   );

@@ -93,108 +93,6 @@ function PayModal({ conversationId, onClose, onCreated }: { conversationId: numb
   );
 }
 
-interface OrderProduct { id: number; nombre: string; udm: string; precio: number; stock: number }
-interface OrderLine { product: OrderProduct; cantidad: number }
-
-function OrderModal({ conversationId, onClose, onCreated }: { conversationId: number; onClose: () => void; onCreated: () => void }) {
-  const [products, setProducts] = useState<OrderProduct[]>([]);
-  const [lines, setLines] = useState<OrderLine[]>([]);
-  const [notes, setNotes] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
-
-  useEffect(() => {
-    fetch("/api/admin/products").then(r => r.ok ? r.json() : []).then((ps: OrderProduct[]) => setProducts(ps.filter(p => p.stock > 0)));
-  }, []);
-
-  function addLine(p: OrderProduct) {
-    setLines(prev => {
-      const ex = prev.find(l => l.product.id === p.id);
-      if (ex) return prev.map(l => l.product.id === p.id ? { ...l, cantidad: l.cantidad + 1 } : l);
-      return [...prev, { product: p, cantidad: 1 }];
-    });
-  }
-
-  function setQty(productId: number, val: string) {
-    const n = parseFloat(val) || 0;
-    setLines(prev => n <= 0 ? prev.filter(l => l.product.id !== productId) : prev.map(l => l.product.id === productId ? { ...l, cantidad: n } : l));
-  }
-
-  const total = lines.reduce((s, l) => s + l.cantidad * l.product.precio, 0);
-
-  async function submit() {
-    if (lines.length === 0) { setErr("Agrega al menos un producto"); return; }
-    setLoading(true); setErr("");
-    const res = await fetch("/api/orders", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversation_id: conversationId, notes: notes.trim() || undefined,
-        items: lines.map(l => ({ product_id: l.product.id, nombre_snapshot: l.product.nombre, udm_snapshot: l.product.udm, cantidad: l.cantidad, precio_unitario: l.product.precio })),
-      }),
-    });
-    if (res.ok) { onCreated(); onClose(); }
-    else { const d = await res.json(); setErr(d.error ?? "Error"); setLoading(false); }
-  }
-
-  const inp = { background: BG, border: `1px solid ${BORD}`, borderRadius: 6, padding: "5px 8px", color: TEXT, fontSize: 12, outline: "none", width: 72, boxSizing: "border-box" as const };
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }} onClick={onClose}>
-      <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 16, padding: "24px 28px", width: "100%", maxWidth: 480, maxHeight: "80vh", overflow: "auto" }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>📦 Crear Pedido</h3>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", color: MUTED, fontSize: 20, cursor: "pointer" }}>×</button>
-        </div>
-
-        {/* Product list */}
-        <div style={{ maxHeight: 240, overflowY: "auto", marginBottom: 12 }}>
-          {products.map(p => {
-            const line = lines.find(l => l.product.id === p.id);
-            return (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${BORD}` }}>
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: 12, color: TEXT }}>{p.nombre}</span>
-                  <span style={{ fontSize: 10, color: MUTED, marginLeft: 6 }}>{p.precio.toLocaleString("es-CU")} CUP/{p.udm}</span>
-                </div>
-                {line ? (
-                  <input type="number" value={line.cantidad} min={0} step={0.5} onChange={e => setQty(p.id, e.target.value)} style={inp} />
-                ) : (
-                  <button onClick={() => addLine(p)} style={{ fontSize: 11, padding: "3px 10px", background: `${PRP}22`, color: PRP, border: `1px solid ${PRP}44`, borderRadius: 6, cursor: "pointer" }}>+ Agregar</button>
-                )}
-              </div>
-            );
-          })}
-          {products.length === 0 && <p style={{ fontSize: 12, color: MUTED, textAlign: "center", padding: "16px 0" }}>Sin productos con stock</p>}
-        </div>
-
-        {/* Lines summary */}
-        {lines.length > 0 && (
-          <div style={{ background: BG, borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
-            {lines.map(l => (
-              <div key={l.product.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: MUTED, marginBottom: 3 }}>
-                <span>{l.product.nombre} × {l.cantidad} {l.product.udm}</span>
-                <span style={{ color: TEAL }}>{(l.cantidad * l.product.precio).toLocaleString("es-CU")} CUP</span>
-              </div>
-            ))}
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, color: TEXT, marginTop: 8, borderTop: `1px solid ${BORD}`, paddingTop: 8 }}>
-              <span>Total</span><span style={{ color: TEAL }}>{total.toLocaleString("es-CU")} CUP</span>
-            </div>
-          </div>
-        )}
-
-        <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Nota opcional..." style={{ ...inp, width: "100%", marginBottom: 12, padding: "8px 12px" }} />
-        {err && <p style={{ fontSize: 12, color: RED, marginBottom: 10 }}>{err}</p>}
-        <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={submit} disabled={loading || lines.length === 0} style={{ flex: 1, padding: "9px", fontSize: 13, fontWeight: 600, background: PRP, color: "#fff", border: "none", borderRadius: 8, cursor: loading ? "not-allowed" : "pointer", opacity: (loading || lines.length === 0) ? .6 : 1 }}>
-            {loading ? "Creando..." : `Crear pedido · ${total.toLocaleString("es-CU")} CUP`}
-          </button>
-          <button onClick={onClose} style={{ padding: "9px 16px", fontSize: 13, background: "transparent", color: MUTED, border: `1px solid ${BORD}`, borderRadius: 8, cursor: "pointer" }}>Cancelar</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 interface Note {
   id: number;
   username_snapshot: string;
@@ -221,7 +119,6 @@ export function ConversationPanel({ conversation, onModeChange, onDelete }: Conv
   const [messages, setMessages] = useState<Message[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [showPayModal, setShowPayModal] = useState(false);
-  const [showOrderModal, setShowOrderModal] = useState(false);
   const mode = conversation.mode;
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -364,10 +261,6 @@ export function ConversationPanel({ conversation, onModeChange, onDelete }: Conv
       {showPayModal && (
         <PayModal conversationId={conversation.id} onClose={() => setShowPayModal(false)} onCreated={(p) => { setPayments(prev => [p, ...prev]); }} />
       )}
-      {showOrderModal && (
-        <OrderModal conversationId={conversation.id} onClose={() => setShowOrderModal(false)} onCreated={() => {}} />
-      )}
-
       {/* Header */}
       <div style={{ borderBottom: `1px solid ${BORD}`, background: CARD, flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px" }}>
@@ -376,12 +269,6 @@ export function ConversationPanel({ conversation, onModeChange, onDelete }: Conv
           <p style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{conversation.phone}</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            onClick={() => setShowOrderModal(true)}
-            style={{ fontSize: 11, fontWeight: 600, color: "#ffd166", background: "rgba(255,209,102,.1)", border: `1px solid rgba(255,209,102,.3)`, padding: "4px 12px", borderRadius: 8, cursor: "pointer" }}
-          >
-            📦 Pedido
-          </button>
           <button
             onClick={() => setShowPayModal(true)}
             style={{ fontSize: 11, fontWeight: 600, color: TEAL, background: "rgba(0,212,170,.1)", border: `1px solid rgba(0,212,170,.3)`, padding: "4px 12px", borderRadius: 8, cursor: "pointer" }}

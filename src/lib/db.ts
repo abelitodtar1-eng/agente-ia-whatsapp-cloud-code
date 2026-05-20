@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
-import { scryptSync, randomBytes, randomUUID } from "node:crypto";
+import { scryptSync, randomBytes } from "node:crypto";
 
 const DATA_DIR = path.resolve(process.cwd(), "data");
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -802,162 +802,6 @@ export function markPaymentReminded(id: number): void {
   db.prepare("UPDATE payments SET reminded_at = unixepoch() WHERE id = ?").run(id);
 }
 
-// ─── Orders ───────────────────────────────────────────────────────────────────
-db.prepare(`CREATE TABLE IF NOT EXISTS orders (
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-  status          TEXT CHECK(status IN ('draft','confirmed','paid','shipped','cancelled')) NOT NULL DEFAULT 'draft',
-  total_cup       REAL NOT NULL DEFAULT 0,
-  notes           TEXT,
-  payment_id      INTEGER REFERENCES payments(id),
-  created_at      INTEGER NOT NULL DEFAULT (unixepoch()),
-  updated_at      INTEGER NOT NULL DEFAULT (unixepoch())
-)`).run();
-
-db.prepare(`CREATE TABLE IF NOT EXISTS order_items (
-  id               INTEGER PRIMARY KEY AUTOINCREMENT,
-  order_id         INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-  product_id       INTEGER REFERENCES products(id),
-  nombre_snapshot  TEXT NOT NULL,
-  udm_snapshot     TEXT NOT NULL DEFAULT '',
-  cantidad         REAL NOT NULL,
-  precio_unitario  REAL NOT NULL,
-  subtotal         REAL NOT NULL
-)`).run();
-
-export type OrderStatus = "draft" | "confirmed" | "paid" | "shipped" | "cancelled";
-
-export interface Order {
-  id: number;
-  conversation_id: number;
-  status: OrderStatus;
-  total_cup: number;
-  notes: string | null;
-  payment_id: number | null;
-  created_at: number;
-  updated_at: number;
-  contact_name: string | null;
-  contact_phone: string;
-  phone_alias: string | null;
-}
-
-export interface OrderItem {
-  id: number;
-  order_id: number;
-  product_id: number | null;
-  nombre_snapshot: string;
-  udm_snapshot: string;
-  cantidad: number;
-  precio_unitario: number;
-  subtotal: number;
-}
-
-export interface OrderWithItems extends Order {
-  items: OrderItem[];
-}
-
-export function listOrders(limit = 100, offset = 0): Order[] {
-  return db.prepare(`
-    SELECT o.*, c.name AS contact_name, c.phone AS contact_phone, c.phone_alias
-    FROM orders o JOIN conversations c ON c.id = o.conversation_id
-    ORDER BY o.created_at DESC LIMIT ? OFFSET ?
-  `).all(limit, offset) as Order[];
-}
-
-export function getOrdersByConversation(conversationId: number): OrderWithItems[] {
-  const orders = db.prepare(`
-    SELECT o.*, c.name AS contact_name, c.phone AS contact_phone, c.phone_alias
-    FROM orders o JOIN conversations c ON c.id = o.conversation_id
-    WHERE o.conversation_id = ? ORDER BY o.created_at DESC
-  `).all(conversationId) as Order[];
-  return orders.map(o => ({
-    ...o,
-    items: db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(o.id) as OrderItem[],
-  }));
-}
-
-export function getOrder(id: number): OrderWithItems | null {
-  const o = db.prepare(`
-    SELECT o.*, c.name AS contact_name, c.phone AS contact_phone, c.phone_alias
-    FROM orders o JOIN conversations c ON c.id = o.conversation_id
-    WHERE o.id = ?
-  `).get(id) as Order | undefined;
-  if (!o) return null;
-  return { ...o, items: db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(o.id) as OrderItem[] };
-}
-
-export interface CreateOrderInput {
-  conversation_id: number;
-  notes?: string;
-  items: { product_id: number | null; nombre_snapshot: string; udm_snapshot: string; cantidad: number; precio_unitario: number }[];
-}
-
-export function createOrder(input: CreateOrderInput): OrderWithItems {
-  const total_cup = input.items.reduce((s, i) => s + i.cantidad * i.precio_unitario, 0);
-  const order = db.prepare(
-    "INSERT INTO orders (conversation_id, total_cup, notes) VALUES (?,?,?) RETURNING *"
-  ).get(input.conversation_id, total_cup, input.notes ?? null) as Order;
-
-  const insertItem = db.prepare(
-    "INSERT INTO order_items (order_id, product_id, nombre_snapshot, udm_snapshot, cantidad, precio_unitario, subtotal) VALUES (?,?,?,?,?,?,?) RETURNING *"
-  );
-  const items = input.items.map(i =>
-    insertItem.get(order.id, i.product_id, i.nombre_snapshot, i.udm_snapshot, i.cantidad, i.precio_unitario, i.cantidad * i.precio_unitario) as OrderItem
-  );
-  return { ...order, contact_name: null, contact_phone: "", phone_alias: null, items };
-}
-
-export function updateOrderStatus(id: number, status: OrderStatus, paymentId?: number): void {
-  db.prepare("UPDATE orders SET status = ?, payment_id = COALESCE(?, payment_id), updated_at = unixepoch() WHERE id = ?")
-    .run(status, paymentId ?? null, id);
-}
-
-export function deleteOrder(id: number): void {
-  db.prepare("DELETE FROM orders WHERE id = ?").run(id);
-}
-
-export function countOrdersByStatus(): Record<OrderStatus, number> {
-  const rows = db.prepare("SELECT status, COUNT(*) as c FROM orders GROUP BY status").all() as { status: OrderStatus; c: number }[];
-  const base: Record<OrderStatus, number> = { draft: 0, confirmed: 0, paid: 0, shipped: 0, cancelled: 0 };
-  rows.forEach(r => { base[r.status] = r.c; });
-  return base;
-}
-
-// ─── Catálogo ─────────────────────────────────────────────────────────────────
-db.prepare(`CREATE TABLE IF NOT EXISTS catalogo_items (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  title       TEXT NOT NULL,
-  description TEXT,
-  filename    TEXT NOT NULL,
-  created_at  INTEGER NOT NULL DEFAULT (unixepoch())
-)`).run();
-
-export interface CatalogoItem {
-  id: number;
-  title: string;
-  description: string | null;
-  filename: string;
-  created_at: number;
-}
-
-export function listCatalogo(): CatalogoItem[] {
-  return db.prepare("SELECT * FROM catalogo_items ORDER BY created_at DESC").all() as CatalogoItem[];
-}
-
-export function createCatalogoItem(title: string, description: string | null, filename: string): CatalogoItem {
-  return db.prepare(
-    "INSERT INTO catalogo_items (title, description, filename) VALUES (?,?,?) RETURNING *"
-  ).get(title, description, filename) as CatalogoItem;
-}
-
-export function getCatalogoItem(id: number): CatalogoItem | undefined {
-  return db.prepare("SELECT * FROM catalogo_items WHERE id = ?").get(id) as CatalogoItem | undefined;
-}
-
-export function deleteCatalogoItem(id: number): void {
-  db.prepare("DELETE FROM catalogo_items WHERE id = ?").run(id);
-}
-
 // ─── Contact tags ─────────────────────────────────────────────────────────────
 db.prepare(`CREATE TABLE IF NOT EXISTS contact_tags (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -990,9 +834,6 @@ export function getConversationsByTag(tag: string): number[] {
 // ─── Admin phone ──────────────────────────────────────────────────────────────
 db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('admin_phone', '')").run();
 
-// estados_api_token — token estático para autenticar llamadas de n8n al endpoint de estados
-db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('estados_api_token', ?)").run(randomUUID());
-
 export function getAdminPhone(): string {
   return getSetting("admin_phone");
 }
@@ -1007,6 +848,4 @@ export function findProductByName(nombre: string): Product | undefined {
   ) as Product | undefined;
 }
 
-export function getEstadosApiToken(): string {
-  return getSetting("estados_api_token");
-}
+
