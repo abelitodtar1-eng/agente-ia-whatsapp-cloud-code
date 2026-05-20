@@ -4,21 +4,26 @@ import { useState, useEffect } from "react";
 const BG   = "#0a0c10"; const CARD = "#1a1d27"; const BORD = "#2a2d3e";
 const TEAL = "#00d4aa"; const RED  = "#ff6b6b"; const TEXT = "#e2e8f0";
 
-export function SheetIdConfig() {
+interface Props {
+  endpoint?: string;
+  label?: string;
+}
+
+export function SheetIdConfig({ endpoint = "/api/settings/sheet", label = "Google Sheet — Fuente de datos" }: Props) {
   const [sheetId, setSheetId] = useState("");
   const [saved,   setSaved]   = useState("");
   const [status,  setStatus]  = useState<"idle"|"saving"|"ok"|"error">("idle");
   const [msg,     setMsg]     = useState("");
 
   useEffect(() => {
-    fetch("/api/settings/sheet").then(r => r.json()).then((d: { sheetId: string }) => {
+    fetch(endpoint).then(r => r.json()).then((d: { sheetId: string }) => {
       setSheetId(d.sheetId ?? ""); setSaved(d.sheetId ?? "");
     });
-  }, []);
+  }, [endpoint]);
 
   async function save() {
     setStatus("saving"); setMsg("");
-    const res = await fetch("/api/settings/sheet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sheetId }) });
+    const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sheetId }) });
     const d = await res.json() as { ok?: boolean; error?: string };
     if (d.ok) { setSaved(sheetId); setStatus("ok"); setMsg("Guardado"); }
     else { setStatus("error"); setMsg(d.error ?? "Error"); }
@@ -30,14 +35,14 @@ export function SheetIdConfig() {
     <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 10, padding: "14px 18px", marginBottom: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <span style={{ fontSize: 14 }}>📊</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>Google Sheet — Fuente de datos</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>{label}</span>
         <span style={{ fontSize: 10, color: TEAL, background: "rgba(0,212,170,.1)", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>ID</span>
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <input
           value={sheetId}
           onChange={e => { setSheetId(e.target.value); setStatus("idle"); setMsg(""); }}
-          placeholder="1srqMvqVqqF4Hblk611Rrdl_IS1mFQvS1UMkFo2yiv7M"
+          placeholder="ID del Google Spreadsheet"
           style={{ flex: 1, background: BG, border: `1px solid ${dirty ? "#ffd166" : BORD}`, borderRadius: 8, padding: "9px 12px", color: TEXT, fontSize: 12, fontFamily: "monospace", outline: "none" }}
           onFocus={e => { e.target.style.borderColor = TEAL; }}
           onBlur={e => { e.target.style.borderColor = dirty ? "#ffd166" : BORD; }}

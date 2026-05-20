@@ -94,6 +94,7 @@ db.exec(`
   INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_contabilidad', '');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_vendedora', '');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('google_sheet_id', '1srqMvqVqqF4Hblk611Rrdl_IS1mFQvS1UMkFo2yiv7M');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('google_sheet_id_tienda', '');
 `);
 
 
@@ -559,6 +560,14 @@ export function getGoogleSheetId(): string {
 
 export function setGoogleSheetId(id: string): void {
   setSetting("google_sheet_id", id);
+}
+
+export function getGoogleSheetIdTienda(): string {
+  return getSetting("google_sheet_id_tienda") || "";
+}
+
+export function setGoogleSheetIdTienda(id: string): void {
+  setSetting("google_sheet_id_tienda", id);
 }
 
 export function setSystemPrompt(text: string): void {

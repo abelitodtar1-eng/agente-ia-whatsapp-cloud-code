@@ -314,7 +314,7 @@ export function TiendaView() {
 
       {/* Sheet config */}
       <div style={{ padding: "16px 24px 0" }}>
-        <SheetIdConfig />
+        <SheetIdConfig endpoint="/api/settings/sheet-tienda" label="Google Sheet — Catálogo Tienda" />
       </div>
 
       {/* KPIs */}
