@@ -200,7 +200,11 @@ export function TiendaView() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const visible = useMemo(() =>
     products.filter(p => !search || p.nombre.toLowerCase().includes(search.toLowerCase()))
