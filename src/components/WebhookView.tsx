@@ -86,10 +86,14 @@ function WebhookField({
         signal: AbortSignal.timeout(10_000),
       });
       if (res.ok) {
-        const data = await res.json() as Record<string, unknown>;
-        setStatus("ok"); setMsg(`✓ ${res.status} — ${JSON.stringify(data).slice(0, 60)}`);
+        const text = await res.text();
+        const preview = text.trim() ? JSON.stringify(JSON.parse(text)).slice(0, 60) : "(sin body)";
+        setStatus("ok"); setMsg(`✓ ${res.status} — ${preview}`);
       } else { setStatus("error"); setMsg(`Error ${res.status}`); }
-    } catch (e) { setStatus("error"); setMsg(`Sin respuesta: ${e instanceof Error ? e.message : String(e)}`); }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setStatus("error"); setMsg(`Sin respuesta: ${msg}`);
+    }
   }
 
   const dirty = url !== saved;
