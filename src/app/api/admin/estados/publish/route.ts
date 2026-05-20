@@ -21,13 +21,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Parse body — filename es opcional
+  // Parse body — filename es opcional; sin body = publica todo
   let targetFilename: string | null = null;
-  try {
-    const body = await req.json() as { filename?: string };
-    targetFilename = body.filename?.trim() ?? null;
-  } catch {
-    // body vacío es válido (publica todo)
+  const ct = req.headers.get("content-type") ?? "";
+  if (ct.includes("application/json")) {
+    try {
+      const body = await req.json() as { filename?: string };
+      targetFilename = body.filename?.trim() ?? null;
+    } catch {
+      return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+    }
   }
 
   // Leer archivos disponibles
