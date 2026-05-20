@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useRef } from "react";
+import { SheetIdConfig } from "./SheetIdConfig";
 
 const BG    = "#0a0c10";
 const CARD  = "#1a1d27";
@@ -307,8 +308,13 @@ export function TiendaView() {
         </button>
       </div>
 
+      {/* Sheet config */}
+      <div style={{ padding: "16px 24px 0" }}>
+        <SheetIdConfig />
+      </div>
+
       {/* KPIs */}
-      <div style={{ padding: "16px 24px 0", display: "flex", gap: 12 }}>
+      <div style={{ padding: "0 24px 0", display: "flex", gap: 12 }}>
         {[
           { label: "Total", value: products.length, color: PRP },
           { label: "En tienda", value: enStock, color: TEAL },
