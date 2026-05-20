@@ -12,6 +12,7 @@ import {
   getWebhookUrl,
   getInventarioWebhookUrl,
   getContabilidadWebhookUrl,
+  getVendedoraWebhookUrl,
   setMode,
   getAdminPhone,
   type Conversation,
@@ -32,6 +33,14 @@ function resolveWebhookUrl(decision: TriageDecision): string {
     return (
       process.env.N8N_WEBHOOK_CONTABILIDAD ||
       getContabilidadWebhookUrl() ||
+      process.env.N8N_WEBHOOK_URL ||
+      getWebhookUrl()
+    );
+  }
+  if (decision === "vendedora") {
+    return (
+      process.env.N8N_WEBHOOK_VENDEDORA ||
+      getVendedoraWebhookUrl() ||
       process.env.N8N_WEBHOOK_URL ||
       getWebhookUrl()
     );

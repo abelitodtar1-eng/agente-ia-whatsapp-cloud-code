@@ -3,6 +3,7 @@ import {
   getWebhookUrl, setWebhookUrl,
   getInventarioWebhookUrl, setInventarioWebhookUrl,
   getContabilidadWebhookUrl, setContabilidadWebhookUrl,
+  getVendedoraWebhookUrl, setVendedoraWebhookUrl,
 } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -12,11 +13,12 @@ export function GET() {
     url: getWebhookUrl(),
     inventario: getInventarioWebhookUrl(),
     contabilidad: getContabilidadWebhookUrl(),
+    vendedora: getVendedoraWebhookUrl(),
   });
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json() as { url?: string; inventario?: string; contabilidad?: string };
+  const body = await req.json() as { url?: string; inventario?: string; contabilidad?: string; vendedora?: string };
 
   const updates: { field: string; url: string; setter: (u: string) => void }[] = [];
 
@@ -30,6 +32,12 @@ export async function POST(req: NextRequest) {
     const url = body.contabilidad.trim();
     if (url) { try { new URL(url); } catch { return NextResponse.json({ error: "URL contabilidad inválida" }, { status: 400 }); } }
     updates.push({ field: "contabilidad", url, setter: setContabilidadWebhookUrl });
+  }
+
+  if (body.vendedora !== undefined) {
+    const url = body.vendedora.trim();
+    if (url) { try { new URL(url); } catch { return NextResponse.json({ error: "URL vendedora inválida" }, { status: 400 }); } }
+    updates.push({ field: "vendedora", url, setter: setVendedoraWebhookUrl });
   }
 
   if (body.url !== undefined) {

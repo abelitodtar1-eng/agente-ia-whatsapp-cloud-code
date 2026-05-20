@@ -108,7 +108,7 @@ function WebhookField({
   label, icon, description, field, placeholder,
 }: {
   label: string; icon: string; description: string;
-  field: "inventario" | "contabilidad";
+  field: "inventario" | "contabilidad" | "vendedora";
   placeholder: string;
 }) {
   const [url, setUrl] = useState("");
@@ -149,7 +149,7 @@ function WebhookField({
   }
 
   const dirty = url !== saved;
-  const accentColor = field === "inventario" ? TEAL : "#ffd166";
+  const accentColor = field === "inventario" ? TEAL : field === "vendedora" ? "#ff9f43" : "#ffd166";
 
   const msgStyle = status === "ok"
     ? { background: "rgba(0,212,170,.08)", border: `1px solid rgba(0,212,170,.2)`, color: TEAL }
@@ -217,7 +217,8 @@ export function WebhookView() {
         <div style={{ background: "rgba(108,99,255,.06)", border: `1px solid rgba(108,99,255,.2)`, borderRadius: 8, padding: "10px 14px", marginBottom: 20, fontSize: 11, color: MUTED, lineHeight: 1.7 }}>
           <strong style={{ color: TEXT }}>¿Cómo funciona el enrutamiento?</strong><br />
           Inventario → mensajes sobre stock, productos, entradas/salidas, kardex.<br />
-          Contabilidad → mensajes sobre cobros, pagos, saldos, facturas, finanzas.
+          Contabilidad → mensajes sobre cobros, pagos, saldos, facturas, finanzas.<br />
+          Vendedora → mensajes sobre ventas, clientes, cotizaciones, precios y ofertas.
         </div>
 
         <WebhookField
@@ -234,6 +235,14 @@ export function WebhookView() {
           label="Webhook Contabilidad"
           description="Workflow n8n para cobros, pagos, saldos y estado financiero."
           placeholder="https://tu-n8n.host/webhook/contabilidad-id"
+        />
+
+        <WebhookField
+          field="vendedora"
+          icon="🛍️"
+          label="Webhook Vendedora"
+          description="Workflow n8n para ventas, clientes nuevos, cotizaciones y ofertas."
+          placeholder="https://tu-n8n.host/webhook/vendedora-id"
         />
 
         <EnzonaConfig />

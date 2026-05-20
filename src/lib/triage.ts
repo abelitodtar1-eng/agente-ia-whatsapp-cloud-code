@@ -51,7 +51,20 @@ function keywordContabilidad(message: string): boolean {
   return CONTABILIDAD_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
-export type TriageDecision = "inventario" | "contabilidad" | "escalate";
+const VENDEDORA_KEYWORDS = [
+  "venta", "ventas", "vender", "vendedor", "vendedora",
+  "cliente nuevo", "nuevo cliente", "cotización", "cotizacion",
+  "presupuesto", "oferta", "promoción", "promocion", "descuento",
+  "pedido nuevo", "quiero comprar", "cuánto cuesta", "cuanto cuesta",
+  "precio de", "me interesa", "disponible", "catálogo", "catalogo",
+];
+
+function keywordVendedora(message: string): boolean {
+  const lower = message.toLowerCase();
+  return VENDEDORA_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+export type TriageDecision = "inventario" | "contabilidad" | "vendedora" | "escalate";
 
 export async function triageMessage(message: string): Promise<TriageDecision> {
   if (keywordEscalate(message)) {
@@ -69,6 +82,11 @@ export async function triageMessage(message: string): Promise<TriageDecision> {
     return "contabilidad";
   }
 
+  if (keywordVendedora(message)) {
+    console.log("[triage] keyword match → vendedora");
+    return "vendedora";
+  }
+
   if (!process.env.OLLAMA_BASE_URL) return "inventario";
 
   const { text: systemPrompt } = getSystemPrompt();
@@ -80,7 +98,7 @@ export async function triageMessage(message: string): Promise<TriageDecision> {
       messages: [
         {
           role: "system",
-          content: systemPrompt + '\n\nIMPORTANT: Reply with ONLY valid JSON, nothing else. No explanation. No markdown. Valid actions: "inventario", "contabilidad", "escalate". Example: {"action":"inventario"}',
+          content: systemPrompt + '\n\nIMPORTANT: Reply with ONLY valid JSON, nothing else. No explanation. No markdown. Valid actions: "inventario", "contabilidad", "vendedora", "escalate". Example: {"action":"inventario"}',
         },
         { role: "user", content: message },
       ],
@@ -92,6 +110,7 @@ export async function triageMessage(message: string): Promise<TriageDecision> {
       const data = JSON.parse(raw) as { action?: string };
       if (data.action === "escalate") return "escalate";
       if (data.action === "contabilidad") return "contabilidad";
+      if (data.action === "vendedora") return "vendedora";
       return "inventario";
     } catch {
       return "inventario";

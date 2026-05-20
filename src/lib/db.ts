@@ -92,6 +92,7 @@ db.exec(`
   INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_url', '');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_inventario', '');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_contabilidad', '');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_vendedora', '');
 `);
 
 
@@ -482,8 +483,18 @@ export function deleteStatusItem(id: number): void {
 }
 
 export function getAllContactJids(): string[] {
-  const rows = db.prepare("SELECT phone FROM conversations").all() as { phone: string }[];
-  return rows.map(r => `${r.phone}@s.whatsapp.net`);
+  // Use phone_alias (resolved real phone) when available; fall back to phone only if ≤13 digits (real phone, not LID)
+  const rows = db.prepare("SELECT phone, phone_alias FROM conversations").all() as { phone: string; phone_alias: string | null }[];
+  const jids: string[] = [];
+  for (const r of rows) {
+    const alias = r.phone_alias?.replace(/^\+/, "");
+    if (alias && alias.length <= 13) {
+      jids.push(`${alias}@s.whatsapp.net`);
+    } else if (r.phone.length <= 13) {
+      jids.push(`${r.phone}@s.whatsapp.net`);
+    }
+  }
+  return jids;
 }
 
 // --- Settings / System Prompt ---
@@ -531,6 +542,14 @@ export function getContabilidadWebhookUrl(): string {
 
 export function setContabilidadWebhookUrl(url: string): void {
   setSetting("n8n_webhook_contabilidad", url);
+}
+
+export function getVendedoraWebhookUrl(): string {
+  return getSetting("n8n_webhook_vendedora");
+}
+
+export function setVendedoraWebhookUrl(url: string): void {
+  setSetting("n8n_webhook_vendedora", url);
 }
 
 export function setSystemPrompt(text: string): void {
