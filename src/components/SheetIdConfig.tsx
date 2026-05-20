@@ -25,13 +25,20 @@ export function SheetIdConfig({ endpoint = "/api/settings/sheet", label = "Googl
       .catch(() => {});
   }, [endpoint]);
 
+  function extractId(raw: string): string {
+    const m = raw.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    return m ? m[1] : raw.trim();
+  }
+
   async function save() {
+    const cleanId = extractId(sheetId);
+    if (cleanId !== sheetId) setSheetId(cleanId);
     setStatus("saving"); setMsg("");
     try {
-      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sheetId }) });
+      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sheetId: cleanId }) });
       if (!res.ok) { setStatus("error"); setMsg(`Error ${res.status}`); return; }
       const d = await res.json() as { ok?: boolean; error?: string };
-      if (d.ok) { setSaved(sheetId); setStatus("ok"); setMsg("Guardado"); }
+      if (d.ok) { setSaved(cleanId); setStatus("ok"); setMsg("Guardado"); }
       else { setStatus("error"); setMsg(d.error ?? "Error"); }
     } catch (e) { setStatus("error"); setMsg(e instanceof Error ? e.message : "Error"); }
   }
