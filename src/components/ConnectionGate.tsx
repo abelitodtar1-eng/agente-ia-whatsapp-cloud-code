@@ -10,7 +10,6 @@ import { WebhookView } from "./WebhookView";
 import { DashboardView } from "./DashboardView";
 import { ChatbotView } from "./ChatbotView";
 import { HomeView } from "./HomeView";
-import { TiendaView } from "./TiendaView";
 import { PedidosView } from "./PedidosView";
 import { CatalogoView } from "./CatalogoView";
 import { ProductosView } from "./ProductosView";
@@ -29,7 +28,7 @@ interface Conversation {
   last_message_role: string | null;
 }
 
-type Tab = "home" | "conversations" | "contacts" | "webhook" | "dashboard" | "chat" | "tienda" | "pedidos" | "catalogo" | "productos" | "novedades" | "estados" | "conectar";
+type Tab = "home" | "conversations" | "contacts" | "webhook" | "dashboard" | "chat" | "pedidos" | "catalogo" | "productos" | "novedades" | "estados" | "conectar";
 
 export function ConnectionGate() {
   const router = useRouter();
@@ -118,7 +117,6 @@ export function ConnectionGate() {
     { key: "webhook", label: "Webhook" },
     { key: "dashboard", label: "Dashboard" },
     { key: "chat", label: "Chat IA" },
-    { key: "tienda", label: "Tienda" },
     { key: "pedidos", label: "Pedidos" },
     { key: "catalogo", label: "Catálogo" },
     { key: "productos", label: "Productos" },
@@ -209,10 +207,6 @@ export function ConnectionGate() {
       ) : tab === "home" ? (
         <div style={{ flex: 1, overflow: "hidden" }}>
           <HomeView onGoToConversation={(id) => { handleSelect(id); setTab("conversations"); }} />
-        </div>
-      ) : tab === "tienda" ? (
-        <div style={{ flex: 1, overflow: "hidden" }}>
-          <TiendaView />
         </div>
       ) : tab === "chat" ? (
         <div style={{ flex: 1, overflow: "hidden" }}>

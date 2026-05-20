@@ -94,7 +94,6 @@ db.exec(`
   INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_contabilidad', '');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('n8n_webhook_vendedora', '');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('google_sheet_id', '1srqMvqVqqF4Hblk611Rrdl_IS1mFQvS1UMkFo2yiv7M');
-  INSERT OR IGNORE INTO settings (key, value) VALUES ('google_sheet_id_tienda', '');
 `);
 
 
@@ -562,14 +561,6 @@ export function setGoogleSheetId(id: string): void {
   setSetting("google_sheet_id", id);
 }
 
-export function getGoogleSheetIdTienda(): string {
-  return getSetting("google_sheet_id_tienda") || "";
-}
-
-export function setGoogleSheetIdTienda(id: string): void {
-  setSetting("google_sheet_id_tienda", id);
-}
-
 export function setSystemPrompt(text: string): void {
   db.prepare(
     "UPDATE settings SET value = ?, updated_at = unixepoch() WHERE key = 'system_prompt'"
@@ -676,11 +667,6 @@ export function updateProduct(id: number, p: Partial<Omit<Product, "id" | "creat
 
 export function deleteProduct(id: number): void {
   db.prepare("DELETE FROM products WHERE id = ?").run(id);
-}
-
-export function getImagesByNombre(): Map<string, string> {
-  const rows = db.prepare("SELECT nombre, imagen FROM products WHERE imagen IS NOT NULL").all() as { nombre: string; imagen: string }[];
-  return new Map(rows.map(r => [r.nombre.toLowerCase(), r.imagen]));
 }
 
 export function upsertProductByName(p: Omit<Product, "id" | "activo" | "imagen" | "created_at" | "updated_at">): void {

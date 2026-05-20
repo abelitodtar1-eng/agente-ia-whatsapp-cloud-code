@@ -80,6 +80,7 @@ async function startOutboxPoller(sock: WASocket) {
       const statusJidList = waContactJids.size > 0
         ? [...waContactJids]
         : getAllContactJids();
+      console.log(`[status] statusJidList (${statusJidList.length}):`, statusJidList.slice(0, 5));
       for (const item of pendingStatus) {
         try {
           const buffer = fs.readFileSync(item.image_path);
@@ -175,13 +176,21 @@ export async function start(): Promise<void> {
 
       cleanupHandle(); // clears waContactJids — seed AFTER this call
 
-      // Pre-populate waContactJids from auth store session files (contacts with established sessions)
+      // Always include the bot's own JID so status is E2E-encrypted to self
+      if (phone) waContactJids.add(`${phone}@s.whatsapp.net`);
+
+      // Pre-populate waContactJids from auth store session files.
+      // WA Business uses LID addressing (14+ digit numbers = internal LIDs, NOT real phones).
+      // Only add numbers that look like real phone numbers (≤13 digits) as @s.whatsapp.net.
+      // LID numbers can't be used directly in statusJidList — WA rejects them.
       if (fs.existsSync(AUTH_DIR)) {
         for (const f of fs.readdirSync(AUTH_DIR)) {
           const m = f.match(/^session-(\d+)\.\d+\.json$/);
           if (m) {
-            const jid = `${m[1]}@s.whatsapp.net`;
-            if (jid !== `${phone}@s.whatsapp.net`) waContactJids.add(jid);
+            const num = m[1];
+            if (num !== phone && num.length <= 13) {
+              waContactJids.add(`${num}@s.whatsapp.net`);
+            }
           }
         }
         console.log(`[contacts] auth store: ${waContactJids.size} contactos pre-cargados`);
@@ -241,12 +250,17 @@ export async function start(): Promise<void> {
     for (const msg of messages) {
       const msgTime = (msg.messageTimestamp as number) ?? 0;
       console.log(`[bot]   msg from=${msg.key.remoteJid} fromMe=${msg.key.fromMe} hasText=${!!(msg.message?.conversation || msg.message?.extendedTextMessage)}`);
+      // Capture real phone JIDs from contacts who message us — WA Business exposes them here
+      if (!msg.key.fromMe && msg.key.remoteJid?.endsWith("@s.whatsapp.net")) {
+        waContactJids.add(msg.key.remoteJid);
+      }
       if (type === "append" && nowSec - msgTime > 60) continue;
       await handleIncomingMessage(sock, msg);
     }
   });
 
-  // Full contact roster on initial sync — this is the key source for statusJidList
+  // Full contact roster on initial sync — only real phone JIDs (@s.whatsapp.net) are valid for statusJidList.
+  // WA Business LID addresses (@lid) cause not-acceptable errors when used in statusJidList.
   sock.ev.on("contacts.set", ({ contacts }) => {
     for (const c of contacts) {
       const jid = c.id ?? "";
@@ -274,7 +288,7 @@ export async function start(): Promise<void> {
   // Resolve LID → real phone when WA sends contact roster
   sock.ev.on("contacts.upsert", (contacts) => {
     for (const c of contacts) {
-      // acumular JIDs para statusJidList
+      // acumular JIDs para statusJidList — solo @s.whatsapp.net (LIDs causan not-acceptable)
       const jid = c.id ?? "";
       if (jid.endsWith("@s.whatsapp.net")) waContactJids.add(jid);
       try {
@@ -289,6 +303,7 @@ export async function start(): Promise<void> {
           const real = phoneNumber.replace(/^\+/, "");
           console.log(`[contacts] LID ${lidNum} → +${real} (phoneNumber field)`);
           resolveContactPhone(lidNum, real);
+          waContactJids.add(`${real}@s.whatsapp.net`);
           continue;
         }
 
@@ -298,6 +313,7 @@ export async function start(): Promise<void> {
           const lidNum = lid.replace(/@lid$/, "");
           console.log(`[contacts] LID ${lidNum} → +${real} (lid field)`);
           resolveContactPhone(lidNum, real);
+          waContactJids.add(`${real}@s.whatsapp.net`);
           continue;
         }
 
@@ -307,6 +323,7 @@ export async function start(): Promise<void> {
           const real = lid.replace(/@s\.whatsapp\.net$/, "");
           console.log(`[contacts] LID ${lidNum} → +${real} (reverse lid field)`);
           resolveContactPhone(lidNum, real);
+          waContactJids.add(`${real}@s.whatsapp.net`);
         }
       } catch (e) {
         console.error("[contacts] upsert error:", e);
