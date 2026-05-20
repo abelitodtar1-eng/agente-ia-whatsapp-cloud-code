@@ -38,6 +38,32 @@ function urgenciaColor(u: string) {
   return TEAL;
 }
 
+function isConfirmationRequest(text: string): boolean {
+  const t = text.toLowerCase();
+  return (t.includes("¿") || t.includes("?")) &&
+    /confirm|seguro|deseas|quieres|proceder|está bien|continuar|autoriza/.test(t);
+}
+
+async function sendWithAutoConfirm(webhookUrl: string, phone: string, message: string): Promise<string> {
+  async function post(msg: string) {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, message: msg }),
+    });
+    if (!res.ok) throw new Error(`Webhook respondió ${res.status}`);
+    const data = await res.json() as { response?: string };
+    return data.response ?? "";
+  }
+
+  const first = await post(message);
+  if (isConfirmationRequest(first)) {
+    const confirmed = await post("sí");
+    return confirmed || first;
+  }
+  return first;
+}
+
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
@@ -85,14 +111,8 @@ function MovimientoModal({
 
     setSending(true); setErr("");
     try {
-      const res = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: "admin_inventario@web", message }),
-      });
-      if (!res.ok) { setErr(`Webhook respondió ${res.status}`); setSending(false); return; }
-      const data = await res.json() as { response?: string };
-      onDone(data.response ?? "Movimiento registrado");
+      const reply = await sendWithAutoConfirm(webhookUrl, "admin_inventario@web", message);
+      onDone(reply || "Movimiento registrado");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Error de red");
     } finally {
@@ -162,14 +182,8 @@ function NuevoProductoModal({
     const message = `Nuevo producto: descripción "${form.descripcion.trim()}", categoría "${form.categoria || "General"}", UdM "${form.udm}", cantidad inicial ${form.cantidad}, costo unitario ${form.costo}`;
     setSending(true); setErr("");
     try {
-      const res = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: "admin_inventario@web", message }),
-      });
-      if (!res.ok) { setErr(`Webhook respondió ${res.status}`); setSending(false); return; }
-      const data = await res.json() as { response?: string };
-      onDone(data.response ?? "Producto creado en Sheets");
+      const reply = await sendWithAutoConfirm(webhookUrl, "admin_inventario@web", message);
+      onDone(reply || "Producto creado en Sheets");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Error de red");
     } finally {
