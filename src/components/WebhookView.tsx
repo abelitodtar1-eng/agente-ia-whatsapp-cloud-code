@@ -39,22 +39,18 @@ function WebhookField({
   async function handleTest() {
     setStatus("testing"); setMsg("");
     try {
-      const res = await fetch(url, {
+      const res = await fetch("/api/test-webhook", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: "test@s.whatsapp.net", message: "ping" }),
-        signal: AbortSignal.timeout(30_000),
+        body: JSON.stringify({ url }),
       });
-      if (res.ok) {
-        const text = await res.text();
-        const preview = text.trim() ? JSON.stringify(JSON.parse(text)).slice(0, 60) : "(sin body)";
-        setStatus("ok"); setMsg(`✓ ${res.status} — ${preview}`);
-      } else { setStatus("error"); setMsg(`Error ${res.status}`); }
+      const data = await res.json() as { ok?: boolean; status?: number; preview?: string; error?: string };
+      if (data.ok) {
+        setStatus("ok"); setMsg(`✓ ${data.status} — ${data.preview ?? "(sin body)"}`);
+      } else {
+        setStatus("error"); setMsg(data.error ?? `Error ${data.status ?? res.status}`);
+      }
     } catch (e) {
-      const name = e instanceof Error ? e.name : "";
-      const detail = e instanceof Error ? e.message : String(e);
-      const isTimeout = name === "TimeoutError" || detail.toLowerCase().includes("timeout");
-      setStatus("error");
-      setMsg(isTimeout ? "Sin respuesta en 30s — el workflow puede estar corriendo, verifica n8n" : `Sin respuesta: ${detail}`);
+      setStatus("error"); setMsg(e instanceof Error ? e.message : "Error de red");
     }
   }
 
