@@ -54,6 +54,7 @@ export function ChatbotView() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState("");
   const [sessionId] = useState(() => {
     if (typeof window === "undefined") return genSessionId();
     const stored = sessionStorage.getItem("dtar_chat_session");
@@ -65,28 +66,41 @@ export function ChatbotView() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    fetch("/api/settings/webhook")
+      .then(r => r.json())
+      .then((d: Record<string, string>) => { if (d.url) setWebhookUrl(d.url); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   async function send() {
     const text = input.trim();
     if (!text || sending) return;
+    if (!webhookUrl) {
+      setMessages((prev) => [...prev, { role: "error", content: "Webhook no configurado. Configúralo en la pestaña Webhook (campo URL general)." }]);
+      return;
+    }
     setInput("");
     setSending(true);
     setMessages((prev) => [...prev, { role: "user", content: text }]);
 
     try {
-      const res = await fetch("/api/chat", {
+      const phone = `webchat_${sessionId}@web`;
+      const res = await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, sessionId }),
+        body: JSON.stringify({ phone, message: text }),
       });
-      const data = await res.json() as { response?: string; error?: string };
-      if (res.ok && data.response) {
-        setMessages((prev) => [...prev, { role: "bot", content: data.response! }]);
-      } else {
-        setMessages((prev) => [...prev, { role: "error", content: data.error ?? "Error desconocido" }]);
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        setMessages((prev) => [...prev, { role: "error", content: `Webhook respondió ${res.status}${body ? `: ${body.slice(0, 80)}` : ""}` }]);
+        return;
       }
+      const data = await res.json() as { response?: string };
+      setMessages((prev) => [...prev, { role: "bot", content: data.response ?? "Sin respuesta del bot." }]);
     } catch (e) {
       setMessages((prev) => [...prev, { role: "error", content: `Sin conexión: ${e instanceof Error ? e.message : String(e)}` }]);
     } finally {
