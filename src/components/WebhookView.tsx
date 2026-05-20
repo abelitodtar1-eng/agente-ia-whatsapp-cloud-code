@@ -42,7 +42,7 @@ function WebhookField({
       const res = await fetch(url, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: "test@s.whatsapp.net", message: "ping" }),
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(30_000),
       });
       if (res.ok) {
         const text = await res.text();
@@ -50,8 +50,11 @@ function WebhookField({
         setStatus("ok"); setMsg(`✓ ${res.status} — ${preview}`);
       } else { setStatus("error"); setMsg(`Error ${res.status}`); }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setStatus("error"); setMsg(`Sin respuesta: ${msg}`);
+      const name = e instanceof Error ? e.name : "";
+      const detail = e instanceof Error ? e.message : String(e);
+      const isTimeout = name === "TimeoutError" || detail.toLowerCase().includes("timeout");
+      setStatus("error");
+      setMsg(isTimeout ? "Sin respuesta en 30s — el workflow puede estar corriendo, verifica n8n" : `Sin respuesta: ${detail}`);
     }
   }
 
