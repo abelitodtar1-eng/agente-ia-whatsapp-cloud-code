@@ -74,11 +74,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_outbox_pending ON outbox(sent, created_at);
 
   CREATE TABLE IF NOT EXISTS status_queue (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    image_path TEXT NOT NULL,
-    caption    TEXT NOT NULL DEFAULT '',
-    sent       INTEGER NOT NULL DEFAULT 0,
-    created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    image_path     TEXT NOT NULL,
+    caption        TEXT NOT NULL DEFAULT '',
+    sent           INTEGER NOT NULL DEFAULT 0,
+    contacts_count INTEGER NOT NULL DEFAULT 0,
+    created_at     INTEGER NOT NULL DEFAULT (unixepoch())
   );
 
   CREATE TABLE IF NOT EXISTS settings (
@@ -444,6 +445,20 @@ export function markOutboxSent(id: number): void {
 // ─── Status queue (cross-process IPC para estados WA) ─────────────────────────
 export interface StatusQueueItem { id: number; image_path: string; caption: string }
 
+export interface StatusHistoryItem {
+  id: number;
+  image_path: string;
+  caption: string;
+  sent: number;
+  contacts_count: number;
+  created_at: number;
+}
+
+// migration: add contacts_count if not exists (safe on existing DBs)
+try {
+  db.prepare("ALTER TABLE status_queue ADD COLUMN contacts_count INTEGER NOT NULL DEFAULT 0").run();
+} catch { /* column already exists */ }
+
 export function enqueueStatus(imagePath: string, caption: string): void {
   db.prepare("INSERT INTO status_queue (image_path, caption) VALUES (?, ?)").run(imagePath, caption);
 }
@@ -452,8 +467,18 @@ export function getPendingStatus(): StatusQueueItem[] {
   return db.prepare("SELECT id, image_path, caption FROM status_queue WHERE sent = 0 ORDER BY created_at ASC").all() as StatusQueueItem[];
 }
 
-export function markStatusSent(id: number): void {
-  db.prepare("UPDATE status_queue SET sent = 1 WHERE id = ?").run(id);
+export function markStatusSent(id: number, contactsCount = 0): void {
+  db.prepare("UPDATE status_queue SET sent = 1, contacts_count = ? WHERE id = ?").run(contactsCount, id);
+}
+
+export function getStatusHistory(limit = 50): StatusHistoryItem[] {
+  return db.prepare(
+    "SELECT id, image_path, caption, sent, contacts_count, created_at FROM status_queue ORDER BY created_at DESC LIMIT ?"
+  ).all(limit) as StatusHistoryItem[];
+}
+
+export function deleteStatusItem(id: number): void {
+  db.prepare("DELETE FROM status_queue WHERE id = ?").run(id);
 }
 
 export function getAllContactJids(): string[] {

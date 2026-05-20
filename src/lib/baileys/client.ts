@@ -88,7 +88,7 @@ async function startOutboxPoller(sock: WASocket) {
             { image: buffer, caption: item.caption },
             { statusJidList }
           );
-          markStatusSent(item.id);
+          markStatusSent(item.id, statusJidList.length);
           console.log(`[status] enviado (${statusJidList.length} contactos WA): "${item.caption.slice(0, 40)}"`);
         } catch (err) {
           console.error(`[status] fallo:`, err instanceof Error ? err.message : err);
