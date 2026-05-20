@@ -4,62 +4,6 @@ import { useState, useEffect } from "react";
 const BG = "#0a0c10"; const CARD = "#1a1d27"; const BORD = "#2a2d3e"; const PRP = "#6c63ff";
 const TEAL = "#00d4aa"; const RED = "#ff6b6b"; const TEXT = "#e2e8f0"; const MUTED = "#8892a4";
 
-function EnzonaConfig() {
-  const [ck, setCk] = useState(""); const [cs, setCs] = useState(""); const [mu, setMu] = useState("");
-  const [status, setStatus] = useState<"idle"|"saving"|"ok"|"error">("idle");
-  const [msg, setMsg] = useState("");
-
-  useEffect(() => {
-    fetch("/api/settings/enzona").then(r => r.json()).then((d: { consumerKey: string; consumerSecret: string; merchantUuid: string }) => {
-      setCk(d.consumerKey ?? ""); setCs(d.consumerSecret ?? ""); setMu(d.merchantUuid ?? "");
-    });
-  }, []);
-
-  async function save() {
-    setStatus("saving"); setMsg("");
-    const res = await fetch("/api/settings/enzona", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ consumerKey: ck, consumerSecret: cs, merchantUuid: mu }) });
-    const d = await res.json() as { ok?: boolean; error?: string };
-    if (d.ok) { setStatus("ok"); setMsg("Guardado"); } else { setStatus("error"); setMsg(d.error ?? "Error"); }
-  }
-
-  const inputStyle = { width: "100%", background: BG, border: `1px solid ${BORD}`, borderRadius: 8, padding: "9px 12px", color: TEXT, fontSize: 12, fontFamily: "monospace", outline: "none", boxSizing: "border-box" as const };
-
-  return (
-    <div style={{ background: CARD, border: `1px solid rgba(108,99,255,.25)`, borderRadius: 10, padding: "18px 20px", marginTop: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-        <span style={{ fontSize: 14 }}>💳</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Enzona — Pasarela de Pagos</span>
-        <span style={{ fontSize: 10, color: PRP, background: "rgba(108,99,255,.1)", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>Cuba</span>
-      </div>
-      <p style={{ fontSize: 11, color: MUTED, marginBottom: 14, lineHeight: 1.6 }}>
-        Obtén las credenciales en <strong style={{ color: TEXT }}>api.enzona.net/store</strong> · Registra tu comercio en <strong style={{ color: TEXT }}>bulevar.enzona.net</strong>
-      </p>
-      <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
-        <div>
-          <label style={{ display: "block", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 4 }}>Consumer Key</label>
-          <input value={ck} onChange={e => setCk(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxx" style={inputStyle}
-            onFocus={e => { e.target.style.borderColor = PRP; }} onBlur={e => { e.target.style.borderColor = BORD; }} />
-        </div>
-        <div>
-          <label style={{ display: "block", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 4 }}>Consumer Secret</label>
-          <input value={cs} onChange={e => setCs(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxx" type="password" style={inputStyle}
-            onFocus={e => { e.target.style.borderColor = PRP; }} onBlur={e => { e.target.style.borderColor = BORD; }} />
-        </div>
-        <div>
-          <label style={{ display: "block", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 4 }}>Merchant UUID</label>
-          <input value={mu} onChange={e => setMu(e.target.value)} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" style={inputStyle}
-            onFocus={e => { e.target.style.borderColor = PRP; }} onBlur={e => { e.target.style.borderColor = BORD; }} />
-        </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button onClick={save} disabled={!ck||!cs||!mu||status==="saving"} style={{ padding: "8px 20px", fontSize: 12, fontWeight: 600, background: PRP, color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", opacity: (!ck||!cs||!mu||status==="saving") ? .5 : 1 }}>
-          {status === "saving" ? "Guardando..." : "Guardar"}
-        </button>
-        {msg && <span style={{ fontSize: 12, color: status === "ok" ? TEAL : RED }}>{msg}</span>}
-      </div>
-    </div>
-  );
-}
 
 function EstadosTokenSection() {
   const [token, setToken] = useState("");
@@ -245,7 +189,6 @@ export function WebhookView() {
           placeholder="https://tu-n8n.host/webhook/vendedora-id"
         />
 
-        <EnzonaConfig />
         <EstadosTokenSection />
       </div>
     </div>
