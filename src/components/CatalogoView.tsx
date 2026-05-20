@@ -21,7 +21,14 @@ function UploadForm({ onCreated }: { onCreated: () => void }) {
   const [msg, setMsg] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const MAX_MB = 8;
+
   function handleFile(f: File) {
+    if (f.size > MAX_MB * 1024 * 1024) {
+      setStatus("error"); setMsg(`Imagen muy grande (máx ${MAX_MB}MB). Comprime la foto antes de subir.`);
+      return;
+    }
+    setStatus("idle"); setMsg("");
     setFile(f);
     const url = URL.createObjectURL(f);
     setPreview(url);
@@ -29,6 +36,10 @@ function UploadForm({ onCreated }: { onCreated: () => void }) {
 
   async function handleSubmit() {
     if (!title.trim() || !file) return;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      setStatus("error"); setMsg(`Imagen muy grande (máx ${MAX_MB}MB)`);
+      return;
+    }
     setStatus("uploading"); setMsg("");
     const form = new FormData();
     form.append("title", title.trim());
@@ -69,10 +80,15 @@ function UploadForm({ onCreated }: { onCreated: () => void }) {
           onMouseEnter={e => { (e.target as HTMLElement).style.borderColor = PRP; }}
           onMouseLeave={e => { (e.target as HTMLElement).style.borderColor = BORD; }}
         >
-          {preview ? (
-            <img src={preview} alt="preview" style={{ maxHeight: 160, maxWidth: "100%", borderRadius: 6, objectFit: "contain" }} />
+          {preview && file ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <img src={preview} alt="preview" style={{ maxHeight: 140, maxWidth: "100%", borderRadius: 6, objectFit: "contain" }} />
+              <span style={{ fontSize: 10, color: file.size > MAX_MB * 1024 * 1024 ? RED : MUTED }}>
+                {(file.size / 1024 / 1024).toFixed(1)} MB {file.size > MAX_MB * 1024 * 1024 ? "— muy grande" : ""}
+              </span>
+            </div>
           ) : (
-            <span style={{ fontSize: 11, color: MUTED }}>Arrastra imagen aquí o haz clic · JPG / PNG / WEBP</span>
+            <span style={{ fontSize: 11, color: MUTED }}>Arrastra imagen aquí o haz clic · JPG / PNG / WEBP · máx {MAX_MB}MB</span>
           )}
         </div>
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: "none" }}
