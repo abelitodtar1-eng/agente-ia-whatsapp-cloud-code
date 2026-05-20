@@ -173,6 +173,18 @@ export async function start(): Promise<void> {
       setConnectionState({ status: "connected", qr_string: null, phone });
       console.log("[bot] Conectado:", phone);
 
+      // Pre-populate waContactJids from auth store session files (contacts with established sessions)
+      if (fs.existsSync(AUTH_DIR)) {
+        for (const f of fs.readdirSync(AUTH_DIR)) {
+          const m = f.match(/^session-(\d+)\.\d+\.json$/);
+          if (m) {
+            const jid = `${m[1]}@s.whatsapp.net`;
+            if (jid !== `${phone}@s.whatsapp.net`) waContactJids.add(jid);
+          }
+        }
+        console.log(`[contacts] auth store: ${waContactJids.size} contactos pre-cargados`);
+      }
+
       cleanupHandle();
       const outboxInterval = await startOutboxPoller(sock);
       handle = { sock, outboxInterval };
