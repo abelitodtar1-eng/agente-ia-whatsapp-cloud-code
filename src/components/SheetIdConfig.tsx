@@ -16,17 +16,24 @@ export function SheetIdConfig({ endpoint = "/api/settings/sheet", label = "Googl
   const [msg,     setMsg]     = useState("");
 
   useEffect(() => {
-    fetch(endpoint).then(r => r.json()).then((d: { sheetId: string }) => {
-      setSheetId(d.sheetId ?? ""); setSaved(d.sheetId ?? "");
-    });
+    fetch(endpoint)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { sheetId: string } | null) => {
+        if (!d) return;
+        setSheetId(d.sheetId ?? ""); setSaved(d.sheetId ?? "");
+      })
+      .catch(() => {});
   }, [endpoint]);
 
   async function save() {
     setStatus("saving"); setMsg("");
-    const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sheetId }) });
-    const d = await res.json() as { ok?: boolean; error?: string };
-    if (d.ok) { setSaved(sheetId); setStatus("ok"); setMsg("Guardado"); }
-    else { setStatus("error"); setMsg(d.error ?? "Error"); }
+    try {
+      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sheetId }) });
+      if (!res.ok) { setStatus("error"); setMsg(`Error ${res.status}`); return; }
+      const d = await res.json() as { ok?: boolean; error?: string };
+      if (d.ok) { setSaved(sheetId); setStatus("ok"); setMsg("Guardado"); }
+      else { setStatus("error"); setMsg(d.error ?? "Error"); }
+    } catch (e) { setStatus("error"); setMsg(e instanceof Error ? e.message : "Error"); }
   }
 
   const dirty = sheetId !== saved;

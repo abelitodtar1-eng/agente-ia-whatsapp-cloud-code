@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getGoogleSheetIdTienda, getConnectionState, getImagesByNombre } from "@/lib/db";
+import { getGoogleSheetIdTienda, getConnectionState, getImagesByNombre, listActiveProducts } from "@/lib/db";
 
 interface GvizCell { v: string | number | null; f?: string }
 interface GvizRow  { c: (GvizCell | null)[] }
@@ -33,7 +33,6 @@ export async function GET() {
     const sheetId = getGoogleSheetIdTienda();
     if (!sheetId) {
       // fallback: SQLite local
-      const { listActiveProducts } = await import("@/lib/db");
       const conn = getConnectionState();
       const productos = listActiveProducts().map(p => ({
         id: p.id, nombre: p.nombre, categoria: p.categoria,
