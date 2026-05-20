@@ -255,6 +255,58 @@ const URGENCIA_FILTERS = [
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
+function SheetIdConfig() {
+  const [sheetId, setSheetId] = useState("");
+  const [saved,   setSaved]   = useState("");
+  const [status,  setStatus]  = useState<"idle"|"saving"|"ok"|"error">("idle");
+  const [msg,     setMsg]     = useState("");
+
+  useEffect(() => {
+    fetch("/api/settings/sheet").then(r => r.json()).then((d: { sheetId: string }) => {
+      setSheetId(d.sheetId ?? ""); setSaved(d.sheetId ?? "");
+    });
+  }, []);
+
+  async function save() {
+    setStatus("saving"); setMsg("");
+    const res = await fetch("/api/settings/sheet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sheetId }) });
+    const d = await res.json() as { ok?: boolean; error?: string };
+    if (d.ok) { setSaved(sheetId); setStatus("ok"); setMsg("Guardado"); }
+    else { setStatus("error"); setMsg(d.error ?? "Error"); }
+  }
+
+  const dirty = sheetId !== saved;
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 10, padding: "14px 18px", marginBottom: 18 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 14 }}>📊</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>Google Sheet — Fuente de datos</span>
+        <span style={{ fontSize: 10, color: TEAL, background: "rgba(0,212,170,.1)", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>ID</span>
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input
+          value={sheetId}
+          onChange={e => { setSheetId(e.target.value); setStatus("idle"); setMsg(""); }}
+          placeholder="1srqMvqVqqF4Hblk611Rrdl_IS1mFQvS1UMkFo2yiv7M"
+          style={{ flex: 1, background: BG, border: `1px solid ${dirty ? "#ffd166" : BORD}`, borderRadius: 8, padding: "9px 12px", color: TEXT, fontSize: 12, fontFamily: "monospace", outline: "none" }}
+          onFocus={e => { e.target.style.borderColor = TEAL; }}
+          onBlur={e => { e.target.style.borderColor = dirty ? "#ffd166" : BORD; }}
+        />
+        <button
+          onClick={save}
+          disabled={!sheetId.trim() || status === "saving"}
+          style={{ padding: "9px 18px", fontSize: 12, fontWeight: 600, background: TEAL, color: "#0a0c10", border: "none", borderRadius: 8, cursor: (!sheetId.trim() || status === "saving") ? "not-allowed" : "pointer", opacity: (!sheetId.trim() || status === "saving") ? .5 : 1, whiteSpace: "nowrap" }}
+        >
+          {status === "saving" ? "..." : "Guardar"}
+        </button>
+      </div>
+      {dirty && <p style={{ fontSize: 11, color: "#ffd166", marginTop: 5 }}>⚠ Cambios sin guardar</p>}
+      {msg && <p style={{ fontSize: 11, color: status === "ok" ? TEAL : RED, marginTop: 6 }}>{msg}</p>}
+    </div>
+  );
+}
+
 export function DashboardView() {
   const [data,  setData]  = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -392,6 +444,8 @@ export function DashboardView() {
 
       {/* Scrollable content */}
       <div style={{ flex: 1, overflowY: "auto", padding: "18px 22px" }}>
+
+        <SheetIdConfig />
 
         {/* KPIs */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 12, marginBottom: 18 }}>

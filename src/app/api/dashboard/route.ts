@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-
-const SHEET_ID = "1srqMvqVqqF4Hblk611Rrdl_IS1mFQvS1UMkFo2yiv7M";
+import { getGoogleSheetId } from "@/lib/db";
 
 interface GvizCell { v: string | number | null; f?: string }
 interface GvizRow  { c: (GvizCell | null)[] }
@@ -9,7 +8,7 @@ interface GvizTable { cols: GvizCol[]; rows: GvizRow[] }
 interface GvizResponse { table: GvizTable }
 
 async function fetchSheet(sheet: string): Promise<Record<string, string | number | null>[]> {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheet)}`;
+  const url = `https://docs.google.com/spreadsheets/d/${getGoogleSheetId()}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheet)}`;
   const res = await fetch(url, { next: { revalidate: 60 } });
   const raw = await res.text();
   const jsonStr = raw.replace(/^\/\*.*?\*\/\s*google\.visualization\.Query\.setResponse\(/, "").replace(/\);?\s*$/, "");

@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { upsertProductByName } from "@/lib/db";
-
-const SHEET_ID = "1srqMvqVqqF4Hblk611Rrdl_IS1mFQvS1UMkFo2yiv7M";
+import { upsertProductByName, getGoogleSheetId } from "@/lib/db";
 
 async function fetchSheet(sheet: string): Promise<Record<string, string | number | null>[]> {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheet)}`;
+  const url = `https://docs.google.com/spreadsheets/d/${getGoogleSheetId()}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheet)}`;
   const res = await fetch(url, { cache: "no-store" });
   const raw = await res.text();
   const jsonStr = raw
