@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
-import { enqueueStatus, getStatusHistory } from "@/lib/db";
+import { enqueueStatus, getPendingStatus } from "@/lib/db";
 import { validateEstadosAuth } from "@/lib/estados-auth";
 
 export const dynamic = "force-dynamic";
@@ -45,10 +45,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Obtener paths ya pendientes en status_queue para evitar duplicados
-  const history = getStatusHistory(200);
-  const pendingPaths = new Set(
-    history.filter(i => i.sent === 0).map(i => i.image_path)
-  );
+  const pending = getPendingStatus();
+  const pendingPaths = new Set(pending.map(i => i.image_path));
 
   const queued: string[] = [];
   const skipped: string[] = [];

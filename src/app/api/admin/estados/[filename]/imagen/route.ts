@@ -18,17 +18,18 @@ export async function GET(
   { params }: { params: Promise<{ filename: string }> }
 ) {
   const { filename } = await params;
-
-  // Prevent path traversal
   const safe = path.basename(filename);
+  const ext = path.extname(safe).toLowerCase();
+  if (!MIME[ext]) {
+    return NextResponse.json({ error: "Imagen no encontrada" }, { status: 404 });
+  }
   const filepath = path.join(ESTADOS_DIR, safe);
 
   if (!fs.existsSync(filepath)) {
     return NextResponse.json({ error: "Imagen no encontrada" }, { status: 404 });
   }
 
-  const ext = path.extname(safe).toLowerCase();
-  const mime = MIME[ext] ?? "application/octet-stream";
+  const mime = MIME[ext];
   const buf = fs.readFileSync(filepath);
 
   return new NextResponse(buf, {
