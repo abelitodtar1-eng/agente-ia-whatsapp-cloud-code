@@ -59,10 +59,12 @@ const TEXT  = "#e2e8f0";
 const MUTED = "#8892a4";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-function fmtK(n: number) {
+function fmtK(n: number | null | undefined) {
+  if (n == null) return "—";
   return Math.round(n).toLocaleString("es-ES");
 }
-function fmt2(n: number) {
+function fmt2(n: number | null | undefined) {
+  if (n == null) return "—";
   return n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function diasLabel(d: number | null) {
